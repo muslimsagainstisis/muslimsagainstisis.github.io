@@ -1,0 +1,18 @@
+{
+  "name": "mai",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "",
+    "build": "webpack js/entry.js build.js --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "html-loader": "latest",
+    "json-loader": "latest"
+  }
+}

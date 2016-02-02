@@ -1,0 +1,17 @@
+[{
+    "wrapper": "#somethingtoprove",
+    "duration": "50%",
+    "animations": [{
+      "selector": ".something-to-prove",
+      "opacity": [0, 1]
+    }]
+  }
+  , {
+  "wrapper": "#somethingtoprove",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".something-to-prove",
+    "opacity": [2, 0]
+  }]
+}
+]

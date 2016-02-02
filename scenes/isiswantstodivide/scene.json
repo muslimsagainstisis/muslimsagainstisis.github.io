@@ -1,0 +1,37 @@
+[{
+  "wrapper": "#isiswantstodivide",
+  "duration": "150%",
+  "animations": [{
+    "selector": ".violent-zones",
+    "scale": [1, 5.55]
+  },{
+    "selector": ".anim-2",
+    "opacity": [0, 1.55]
+  }]
+},
+{
+  "wrapper": "#isiswantstodivide",
+  "duration": "150%",
+  "animations": [
+    {
+      "selector": ".violent-zones",
+      "scale": [5.55, 0]
+    }
+    ,{
+    "selector": ".anim-1",
+    "opacity": [0, 1.55]
+  }]
+}
+,{
+  "wrapper": "#isiswantstodivide",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".anim-1",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-20%"]
+  }, {
+    "selector": ".anim-2",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-20%"]
+  }]
+}]

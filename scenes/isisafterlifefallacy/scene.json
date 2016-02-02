@@ -1,0 +1,75 @@
+[{
+    "wrapper": "#isisafterlifefallacy",
+    "duration": "100%",
+    "animations": [{
+      "selector": ".premise",
+      "translateY": "0",
+      "opacity": [0, 1.75]
+    }, {
+      "selector": ".conclusion",
+      "translateX": "-25%",
+      "opacity": [0, 0]
+    }
+    , {
+      "selector": ".calculator",
+      "translateX": "65%",
+      "opacity": [0, 0]
+    }, {
+      "selector": ".quran-read",
+      "translateY": "0%",
+      "opacity": [0, 0]
+    }]
+  }
+
+  , {
+    "wrapper": "#isisafterlifefallacy",
+    "duration": "150%",
+    "animations": [
+
+      {
+        "selector": ".conclusion",
+        "translateX": ["-25%", "0"],
+        "opacity": [0, 1]
+      }, {
+        "selector": ".calculator",
+        "translateX": ["65%", "0"],
+        "opacity": [0, 1]
+      }, {
+        "selector": ".quran-read",
+        "translateY": ["0", "0"],
+        "opacity": [1]
+      }, {
+        "selector": ".quran-hidden",
+        "opacity": [0, 1]
+      }
+    ]
+  }
+
+  , {
+    "wrapper": "#isisafterlifefallacy",
+    "duration": "150%",
+    "animations": [{}]
+  }
+
+  , {
+    "wrapper": "#isisafterlifefallacy",
+    "duration": "250%",
+    "animations": [{
+      "selector": ".conclusion",
+      "translateY": ["0", "-25%"],
+      "opacity": [1, 0]
+    }, {
+      "selector": ".calculator",
+      "translateY": ["0", "-25%"],
+      "opacity": [1, 0]
+    }, {
+      "selector": ".quran-read",
+      "translateY": ["0%", "-25%"],
+      "opacity": [1, 0]
+    }, {
+      "selector": ".premise",
+      "translateY": ["0%", "-25%"],
+      "opacity": [1, 0]
+    }]
+  }
+]

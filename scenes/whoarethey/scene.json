@@ -1,0 +1,17 @@
+[{
+  "wrapper": "#whoarethey",
+  "duration": "50%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0,1]
+  }]
+}
+,{
+  "wrapper": "#whoarethey",
+  "duration": "160%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+  }]
+}
+]

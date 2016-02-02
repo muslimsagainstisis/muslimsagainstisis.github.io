@@ -1,0 +1,18 @@
+[
+  {
+    "wrapper": "#feelingconfused",
+    "duration": "100%",
+    "animations": [{
+      "selector": ".us-against-them",
+      "opacity": [0, 2]
+    }]
+  }
+  , {
+  "wrapper": "#feelingconfused",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".us-against-them",
+    "opacity": [2, 0]
+  }]
+}
+]

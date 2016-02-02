@@ -1,0 +1,58 @@
+[{
+  "wrapper": "#wewillprotecteachother",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".premise",
+    "translateY": ["25%", "0"],
+    "opacity": [0, 1.75]
+  }
+  , {
+    "selector": ".conclusion",
+    "translateY": "25%",
+    "opacity": [0, 0]
+  }]
+}
+
+, {
+  "wrapper": "#wewillprotecteachother",
+  "duration": "50%",
+  "animations": [
+  ]
+}
+
+
+, {
+  "wrapper": "#wewillprotecteachother",
+  "duration": "150%",
+  "animations": [
+    {
+      "selector": ".conclusion",
+      "translateY": ["25%", "0"],
+      "opacity": [0, 1]
+    }
+  ]
+}
+
+, {
+  "wrapper": "#wewillprotecteachother",
+  "duration": "50%",
+  "animations": [
+  ]
+}
+
+, {
+  "wrapper": "#wewillprotecteachother",
+  "duration": "150%",
+  "animations": [
+    {
+      "selector": ".premise",
+      "translateY": ["0", "-25%"],
+      "opacity": [1, 0]
+    },
+    {
+      "selector": ".conclusion",
+      "translateY": ["0", "-25%"],
+      "opacity": [1, 0]
+    }
+  ]
+}]

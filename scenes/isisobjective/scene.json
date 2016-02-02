@@ -1,0 +1,8 @@
+[{
+  "wrapper": "#isisobjective",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [1, 0]
+  }]
+}]

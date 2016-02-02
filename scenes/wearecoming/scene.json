@@ -1,0 +1,18 @@
+[{
+  "wrapper": "#wearecoming",
+  "duration": "50%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0, 1]
+  }]
+},
+{
+  "wrapper": "#wearecoming",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+  }]
+}
+]
+

@@ -1,0 +1,17 @@
+[{
+  "wrapper": "#wearenotafraid",
+  "duration": "50%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0, 1]
+  }]
+},
+{
+  "wrapper": "#wearenotafraid",
+  "duration": "120%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+  }]
+}
+]

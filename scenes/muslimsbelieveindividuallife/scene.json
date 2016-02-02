@@ -1,0 +1,16 @@
+[{
+  "wrapper": "#muslimsbelieveindividuallife",
+  "duration": "50%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0, 1]
+  }]
+},{
+"wrapper": "#muslimsbelieveindividuallife",
+  "duration": "150%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+}]
+}
+]

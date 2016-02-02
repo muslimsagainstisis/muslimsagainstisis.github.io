@@ -1,0 +1,20 @@
+[
+  {
+    "wrapper": "#complicatedsituation",
+    "duration": "150%",
+    "animations": [{
+      "selector": ".display-4",
+      "opacity": [0, 1]
+    }]
+  }
+  , {
+  "wrapper": "#complicatedsituation",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+  }, {
+    "selector": ".too-long-quote",
+    "opacity": [1, 0]
+    }]
+}]

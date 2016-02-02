@@ -1,0 +1,8 @@
+[{
+  "wrapper": "#itsgottoend",
+  "duration": "150%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0,1]
+  }]
+}]

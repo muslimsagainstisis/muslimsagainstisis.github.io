@@ -1,0 +1,47 @@
+[{
+  "wrapper": "#isisbankrupt",
+  "duration": "25%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0, 1]
+  }, {
+    "selector": ".newsources",
+    "translateX": ["300%"]
+  }]
+}, {
+  "wrapper": "#isisbankrupt",
+  "duration": "380%",
+  "animations": [{
+    "selector": ".conclusion",
+    "opacity": [0, 1]
+  }, {
+    "selector": ".newsources",
+    "translateX": ["300%", "-20%"],
+    "opacity": [1]
+  }]
+}, {
+  "wrapper": "#isisbankrupt",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".greyzone-src",
+    "scale": [1,2],
+    "translateY": [0, "-20%"]
+  }]
+}, {
+  "wrapper": "#isisbankrupt",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".newssource-hor",
+    "opacity": [1, 0]
+  }]
+}, {
+  "wrapper": "#isisbankrupt",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".black-zone",
+    "translateX": [0, "90%"]
+  }, {
+    "selector": ".display-4",
+    "opacity": [1, 0]
+  }]
+}]

@@ -1,0 +1,42 @@
+[{
+  "wrapper": "#itisnteasy",
+  "duration": "25%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [0, 1]
+  }, {
+    "selector": ".newsources",
+    "translateY": ["80%"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "500%",
+  "animations": [{
+    "selector": ".newsources",
+    "translateY": ["80%", "-450%"]
+  }
+]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "80%",
+  "animations": [{
+    "selector": ".hidesource",
+    "opacity": [1, 0]
+  }, {
+    "selector": ".display-4",
+    "opacity": [1, 0]
+  }, {
+    "selector": ".trump",
+    "translateX": [0, "-20%"],
+    "translateY": [0, "10%"],
+    "scale": [1, 2]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "300%",
+  "animations": [{
+    "selector": ".trump",
+    "translateX": ["-20%"],
+    "opacity": [1, 0]
+  }]
+}]

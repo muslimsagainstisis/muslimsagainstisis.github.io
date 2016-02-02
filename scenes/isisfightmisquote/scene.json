@@ -1,0 +1,66 @@
+[{
+  "wrapper": "#isisfightmisquote",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".premise",
+    "translateY": "0",
+    "opacity": [0, 1.75]
+  }
+  , {
+    "selector": ".conclusion",
+    "translateY": "25%",
+    "opacity": [0, 0]
+  }
+  , {
+    "selector": ".quran-read",
+    "translateY": "0%",
+    "opacity": [0, 1]
+  }]
+}
+
+, {
+  "wrapper": "#isisfightmisquote",
+  "duration": "150%",
+  "animations": [
+    {
+      "selector": ".premise",
+      "translateY": ["0", "-25%"],
+      "opacity": [1, 0]
+    }
+    , {
+      "selector": ".conclusion",
+      "translateY": ["25%", "0"],
+      "opacity": [0, 1]
+    }
+    , {
+      "selector": ".quran-read",
+      "translateY": ["0", "0"],
+      "opacity": [1]
+    }
+    , {
+      "selector": ".quran-hidden",
+      "opacity": [0, 1]
+    }
+  ]
+}
+
+, {
+  "wrapper": "#isisfightmisquote",
+  "duration": "150%",
+  "animations": [{
+  }]
+}
+
+, {
+  "wrapper": "#isisfightmisquote",
+  "duration": "250%",
+  "animations": [{
+    "selector": ".conclusion",
+    "translateY": ["0", "-25%"],
+    "opacity": [1, 0]
+  }, {
+    "selector": ".quran-read",
+    "translateY": ["0%", "-25%"],
+    "opacity": [1, 0]
+  }]
+}]

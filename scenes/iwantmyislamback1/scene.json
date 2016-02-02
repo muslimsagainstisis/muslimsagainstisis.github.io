@@ -1,0 +1,10 @@
+
+[{
+  "wrapper": "#iwantmyislamback1",
+  "duration": "130%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2, 0]
+  }]
+}
+]

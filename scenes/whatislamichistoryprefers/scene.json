@@ -1,0 +1,45 @@
+
+[
+  {
+    "wrapper": "#whatislamichistoryprefers",
+    "duration": "310%",
+    "animations": [{
+      "selector": ".display-4",
+      "opacity": [0, 1]
+    }]
+  }
+  ,{
+    "wrapper": "#whatislamichistoryprefers",
+    "duration": "100%",
+    "animations": [{
+      "selector": ".display-4",
+      "opacity": [1, 1]
+    },
+    {
+      "selector": ".islamic-inventions",
+      "opacity": [0, 1]
+    }
+    ]
+  }
+  ,{
+    "wrapper": "#whatislamichistoryprefers",
+    "duration": "100%",
+    "animations": [{
+      "selector": ".display-4",
+      "opacity": [1, 1]
+    }
+    ]
+  }
+  ,{
+    "wrapper": "#whatislamichistoryprefers",
+    "duration": "100%",
+    "animations": [{
+      "selector": ".display-4",
+      "opacity": [1, 0]
+    },
+    {
+      "selector": ".islamic-inventions",
+      "opacity": [1, 0]
+    }]
+  }
+]
