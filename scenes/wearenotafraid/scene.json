@@ -1,17 +1,23 @@
 [{
   "wrapper": "#wearenotafraid",
-  "duration": "50%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [0, 1]
   }]
+},{
+  "wrapper": "#wearenotafraid",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
 },
 {
   "wrapper": "#wearenotafraid",
-  "duration": "120%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
-    "opacity": [2, 0]
+    "opacity": [1, 0]
   }]
 }
 ]

@@ -1,3 +1,5 @@
+var Rx = require('rx');
+
 var videoPlayer = require('./videoplayer.js');
 
     /*  Globals
@@ -15,7 +17,9 @@ var videoPlayer = require('./videoplayer.js');
         prevKeyframesDurations =   0,
         scrollTop =                0,
         relativeScrollTop =        0,
-        currentKeyframe =          0;
+        currentKeyframe =          0,
+        frameFocus =               [],
+        currentFocus =             0;
 
 
     /*  Construction
@@ -31,16 +35,22 @@ var videoPlayer = require('./videoplayer.js');
     };
 
     var setupValues = function() {
-      scrollTop = $window.scrollTop();
+      scrollTop = Math.floor($window.scrollTop());
       windowHeight = $window.height();
       windowWidth = $window.width();
       convertAllPropsToPx();
       buildPage();
+      buildScrollBarCenters();
     };
 
     var buildPage = function() {
-      var i, j, k;
+      var i, j, k, initFrames = [];
       for(i=0;i<keyframes.length;i++) { // loop keyframes
+          if(keyframes[i].focus) {
+              if(bodyHeight !== initFrames[initFrames.length - 1]) {
+                initFrames.push(bodyHeight);
+              }
+          }
           bodyHeight += keyframes[i].duration;
           if($.inArray(keyframes[i].wrapper, wrappers) == -1) {
             wrappers.push(keyframes[i].wrapper);
@@ -58,6 +68,12 @@ var videoPlayer = require('./videoplayer.js');
           }
       }
       $body.height(bodyHeight);
+      frameFocus = initFrames.map(function(i){
+        return Math.floor(i);
+      }).reduce(function(a,b){
+        if (a.indexOf(b) < 0 ) a.push(b);
+        return a;
+      },[]);
       $window.scroll(0);
       currentWrapper = wrappers[0];
       $(wrappers[0]).show();
@@ -134,8 +150,17 @@ var videoPlayer = require('./videoplayer.js');
           'transform':    'translateY(' + percent + '%)'
         });
     }
+    function buildScrollBarCenters() {
+      frameFocus
+        .map(function(center) { return (center / bodyHeight).toFixed(2) * 100 })
+        .map(function(centerPercent) { return centerPercent + "vh" })
+        .map(function(centerVh) {
+          $("#experience-progress")
+            .append('<div class="center-marker" style="top:'+ centerVh +'"></div>');
+        });
+    }
     var setScrollTops = function() {
-      scrollTop = $window.scrollTop();
+      scrollTop = Math.floor($window.scrollTop());
       relativeScrollTop = scrollTop - prevKeyframesDurations;
     };
 
@@ -189,7 +214,7 @@ var videoPlayer = require('./videoplayer.js');
     var showCurrentWrappers = function(init) {
       var i;
       if(init) {
-        $newVideo = $('video', keyframes[currentKeyframe].wrapper);
+        var $newVideo = $('video', keyframes[currentKeyframe].wrapper);
 
         if($newVideo[0]) {
           $newVideo[0].play();
@@ -212,7 +237,7 @@ var videoPlayer = require('./videoplayer.js');
 
         if($newVideo[0]) {
           $newVideo[0].play();
-          $newVideo.animate({volume: 1}, 300, 'swing');
+          $newVideo.animate({ volume: $newVideo.attr('max-volume') || 1 }, 300, 'swing');
           videoPlayer.start($newVideo);
         } else {
           videoPlayer.stop($newVideo);
@@ -222,11 +247,75 @@ var videoPlayer = require('./videoplayer.js');
       }
     };
 
+    module.exports.action = function(action) {
+      switch(action) {
+        case 'next':
+          nextFocus();
+          break;
+        case 'previous':
+          previousFocus();
+          break;
+        default:
+          break;
+      }
+    }
+    function nextFocus() {
+      var getScroll = getSlideLocation();
+      console.log("NEXT FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0]], scrollTop, frameFocus);
+      if(getScroll.length === 1) {
+        console.log("JUST ONE", frameFocus[getScroll[0] + 1])
+        renderScroll(frameFocus[getScroll[0] + 1]);
+      } else if(getScroll.length === 2) {
+        console.log("TWO")
+        renderScroll(frameFocus[getScroll[1]]);
+      }
+    }
+
+    function previousFocus() {
+      var getScroll = getSlideLocation();
+      console.log("PREVIOUS FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0] - 1], scrollTop);
+      if(getScroll.length === 1) {
+        console.log("JUST ONE", frameFocus[getScroll[0] - 1])
+        renderScroll(frameFocus[getScroll[0] - 1]);
+      } else if(getScroll.length === 2) {
+        console.log("TWO");
+        renderScroll(frameFocus[getScroll[0]]);
+      }
+    }
+
+    function renderScroll(scroll) {
+      console.log("RENDER", scroll, Math.floor($window.scrollTop()))
+        $body.animate({ scrollTop: scroll }, 1500, 'linear');
+    }
+
+    function getSlideLocation() {
+      setScrollTops();
+      for(var x=1; x <= frameFocus.length; x++) {
+        if(frameFocus[x] === scrollTop) {
+          return [x];
+        }
+        if(scrollTop.between(frameFocus[x-1],frameFocus[x])) {
+          return [x-1,x];
+        }
+      }
+      return [0];
+    }
+
+    Number.prototype.between = function(a, b) {
+      var min = Math.min.apply(Math, [a, b]),
+        max = Math.max.apply(Math, [a, b]);
+      return this > min && this < max;
+    };
+
     /*  Helpers
     -------------------------------------------------- */
 
     var convertPercentToPx = function(value, axis) {
       if(typeof value === "string" && value.match(/%/g)) {
+        if(axis === 'y') value = (parseFloat(value) / 100) * windowHeight;
+        if(axis === 'x') value = (parseFloat(value) / 100) * windowWidth;
+      }
+      if(typeof value === "string" && value.match(/v/g)) {
         if(axis === 'y') value = (parseFloat(value) / 100) * windowHeight;
         if(axis === 'x') value = (parseFloat(value) / 100) * windowWidth;
       }

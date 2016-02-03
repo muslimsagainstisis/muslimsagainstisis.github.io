@@ -1,15 +1,21 @@
 [
   {
     "wrapper": "#mixedfeelings",
-    "duration": "80%",
+    "duration": "100%",
     "animations": [{
       "selector": ".display-4",
       "opacity": [0, 1]
     }]
   }
-  , {
+  ,{
   "wrapper": "#mixedfeelings",
-  "duration": "150%",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}, {
+  "wrapper": "#mixedfeelings",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [2, 0]

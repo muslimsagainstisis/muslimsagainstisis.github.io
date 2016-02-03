@@ -1,12 +1,18 @@
 [{
     "wrapper": "#outtogetyou",
-    "duration": "50%",
+    "duration": "100%",
     "animations": [{
       "selector": ".out-to-get-you",
       "opacity": [0, 1]
     }]
   }
-  , {
+  ,{
+  "wrapper": "#outtogetyou",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}, {
   "wrapper": "#outtogetyou",
   "duration": "100%",
   "animations": [{

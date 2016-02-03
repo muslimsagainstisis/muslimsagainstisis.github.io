@@ -1,6 +1,7 @@
-[{
+[
+{
   "wrapper": "#itisnteasy",
-  "duration": "25%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [0, 1]
@@ -8,7 +9,15 @@
     "selector": ".newsources",
     "translateY": ["80%"]
   }]
-}, {
+},
+{
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+},
+ {
   "wrapper": "#itisnteasy",
   "duration": "500%",
   "animations": [{
@@ -30,6 +39,12 @@
     "translateX": [0, "-20%"],
     "translateY": [0, "10%"],
     "scale": [1, 2]
+  }]
+},{
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
   }]
 }, {
   "wrapper": "#itisnteasy",

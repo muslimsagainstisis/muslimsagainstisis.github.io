@@ -1,16 +1,22 @@
 [{
   "wrapper": "#muslimsbelieveindividuallife",
-  "duration": "50%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [0, 1]
   }]
 },{
+  "wrapper": "#muslimsbelieveindividuallife",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+},{
 "wrapper": "#muslimsbelieveindividuallife",
-  "duration": "150%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
-    "opacity": [2, 0]
+    "opacity": [1, 0]
 }]
 }
 ]

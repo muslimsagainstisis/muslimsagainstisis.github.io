@@ -1,4 +1,5 @@
-[{
+[
+{
     "wrapper": "#isisafterlifefallacy",
     "duration": "100%",
     "animations": [{
@@ -19,7 +20,13 @@
       "translateY": "0%",
       "opacity": [0, 0]
     }]
-  }
+  },{
+  "wrapper": "#isisafterlifefallacy",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}
 
   , {
     "wrapper": "#isisafterlifefallacy",
@@ -43,7 +50,13 @@
         "opacity": [0, 1]
       }
     ]
-  }
+  },{
+  "wrapper": "#isisafterlifefallacy",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}
 
   , {
     "wrapper": "#isisafterlifefallacy",

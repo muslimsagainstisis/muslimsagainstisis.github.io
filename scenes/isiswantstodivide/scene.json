@@ -1,6 +1,6 @@
 [{
   "wrapper": "#isiswantstodivide",
-  "duration": "150%",
+  "duration": "100%",
   "animations": [{
     "selector": ".violent-zones",
     "scale": [1, 5.55]
@@ -11,7 +11,14 @@
 },
 {
   "wrapper": "#isiswantstodivide",
-  "duration": "150%",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+},
+{
+  "wrapper": "#isiswantstodivide",
+  "duration": "100%",
   "animations": [
     {
       "selector": ".violent-zones",
@@ -23,6 +30,12 @@
   }]
 }
 ,{
+  "wrapper": "#isiswantstodivide",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+},{
   "wrapper": "#isiswantstodivide",
   "duration": "100%",
   "animations": [{

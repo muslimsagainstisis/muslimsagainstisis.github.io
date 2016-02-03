@@ -4,10 +4,16 @@
     "duration": "100%",
     "animations": [{
       "selector": ".us-against-them",
-      "opacity": [0, 2]
+      "opacity": [0, 1]
     }]
   }
-  , {
+  ,{
+  "wrapper": "#feelingconfused",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}, {
   "wrapper": "#feelingconfused",
   "duration": "100%",
   "animations": [{

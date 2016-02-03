@@ -1,15 +1,21 @@
 [
   {
     "wrapper": "#differentpractices",
-    "duration": "80%",
+    "duration": "100%",
     "animations": [{
       "selector": ".display-4",
       "opacity": [0, 1]
     }]
   }
-  , {
+  ,{
   "wrapper": "#differentpractices",
-  "duration": "150%",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}, {
+  "wrapper": "#differentpractices",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [2, 0]

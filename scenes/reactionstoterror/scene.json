@@ -1,11 +1,25 @@
-[{
+[
+{
   "wrapper": "#reactionstoterror",
   "duration": "150%",
+  "animations": [{
+  }]
+}, {
+  "wrapper": "#reactionstoterror",
+  "duration": "100%",
   "animations": [{
     "selector": ".anim-1",
     "opacity": [0,1]
   }]
-} ,{
+},
+{
+  "wrapper": "#reactionstoterror",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+},
+{
   "wrapper": "#reactionstoterror",
   "duration": "100%",
   "animations": [{
@@ -13,5 +27,5 @@
     "opacity": [1, 0],
     "translateY": ["0%", "-20%"]
   }]
-}]
-
+}
+]

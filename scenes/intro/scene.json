@@ -1,6 +1,7 @@
 [{
   "wrapper": "#intro",
   "duration": "100%",
+  "focus": true,
   "animations": [{
     "selector": ".display-1",
     "opacity": [1, 0]

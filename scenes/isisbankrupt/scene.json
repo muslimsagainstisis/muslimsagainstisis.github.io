@@ -1,6 +1,6 @@
 [{
   "wrapper": "#isisbankrupt",
-  "duration": "25%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [0, 1]
@@ -9,6 +9,13 @@
     "translateX": ["300%"]
   }]
 }, {
+  "wrapper": "#isisbankrupt",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}
+, {
   "wrapper": "#isisbankrupt",
   "duration": "380%",
   "animations": [{
@@ -19,7 +26,8 @@
     "translateX": ["300%", "-20%"],
     "opacity": [1]
   }]
-}, {
+},
+{
   "wrapper": "#isisbankrupt",
   "duration": "100%",
   "animations": [{
@@ -28,6 +36,14 @@
     "translateY": [0, "-20%"]
   }]
 }, {
+  "wrapper": "#isisbankrupt",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+  }]
+}
+, 
+{
   "wrapper": "#isisbankrupt",
   "duration": "100%",
   "animations": [{

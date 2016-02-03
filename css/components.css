@@ -14,6 +14,15 @@
   /*transition: all 0.1s ease;*/
 }
 
+.center-marker {
+  position: fixed;
+  width: 2vmin;
+  height: 1vmin;
+  background: rgba(255,255,255,0.8);
+  z-index: 101
+}
+
+
 #experience-progress {
   position: fixed;
   top: 0;
@@ -45,6 +54,15 @@
   cursor: pointer;
 }
 
+#togglePlay {
+  font-size: 5vmin;
+  margin-right: 5vmin;
+}
+
+.control-play i {
+  font-size: 8vmin;
+  text-shadow: 0 0.5vmin 1vmin rgba(0,0,0,0.5)
+}
 #unsupported {
   margin: 0 auto;
   text-align: center;

@@ -1,27 +1,27 @@
 [{
   "wrapper": "#likepeace",
-  "duration": "10%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "translateY": "30%"
   }]
 }, {
   "wrapper": "#likepeace",
-  "duration": "50%",
+  "duration": "100%",
   "animations": [{
     "selector": ".first",
     "opacity": [0, 1]
   }]
 }, {
   "wrapper": "#likepeace",
-  "duration": "50%",
+  "duration": "100%",
   "animations": [{
     "selector": ".second",
     "opacity": [0, 1]
   }]
 }, {
   "wrapper": "#likepeace",
-  "duration": "50%",
+  "duration": "100%",
   "animations": [{
     "selector": ".third",
     "opacity": [0, 1]
@@ -67,5 +67,12 @@
   }, {
     "selector": ".display-4",
     "translateY": "0%"
+  }]
+},
+{
+  "wrapper": "#likepeace",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
   }]
 }]

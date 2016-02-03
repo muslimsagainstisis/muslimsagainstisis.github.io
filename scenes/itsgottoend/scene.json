@@ -1,8 +1,24 @@
-[{
+[
+{
   "wrapper": "#itsgottoend",
-  "duration": "150%",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [0,1]
+  }]
+},
+{
+  "wrapper": "#itsgottoend",
+  "duration": "1%",
+  "focus": true,
+  "animations": [{
+  }]
+}
+,{
+  "wrapper": "#itsgottoend",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [1,1]
   }]
 }]

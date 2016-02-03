@@ -1,7 +1,23 @@
 
 [{
   "wrapper": "#iwantmyislamback1",
-  "duration": "130%",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2,2]
+    }]
+},
+{
+  "wrapper": "#iwantmyislamback1",
+  "duration": "100%",
+  "focus": true,
+  "animations": [{
+    "selector": ".display-4",
+    "opacity": [2]
+    }]
+},{
+  "wrapper": "#iwantmyislamback1",
+  "duration": "100%",
   "animations": [{
     "selector": ".display-4",
     "opacity": [2, 0]
