@@ -21,13 +21,6 @@
     "selector": ".anim-2",
     "opacity": [0, 1]
   }]
-},
-{
-  "wrapper": "#doyoufeelmuslim",
-  "duration": "100%",
-  "focus": true,
-  "animations": [{
-  }]
 }
 ,{
   "wrapper": "#doyoufeelmuslim",
