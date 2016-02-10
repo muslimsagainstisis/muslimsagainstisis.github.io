@@ -2,23 +2,26 @@ var animator = require('./picasso.js');
 var controls = require('./controls.js');
 
 var sceneUtils = require('./scene-utils.js');
+var audioplayer = require('./audioplayer.js');
 
 var sceneHtmlString = sceneUtils.renderHTML();
 var sceneMotionMap = sceneUtils.getScenes();
+let sceneAudioConfig =  sceneUtils.getAudioConfig();
 
+audioplayer.config(sceneAudioConfig);
 
 $(function() {
 
       var ua = navigator.userAgent;
 
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua))
-         $('#unsupported').show();
+      // if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua))
+        //  $('#unsupported').show();
 
-      else if (/Chrome/i.test(ua))
+      // else if (/Chrome/i.test(ua))
         init();
 
-      else
-         $('#unsupported').show();
+      // else
+        //  $('#unsupported').show();
 
 });
 
@@ -28,5 +31,6 @@ function init() {
     animator.init(sceneMotionMap);
     controls.init();
     $('.loading').hide();
+    audioplayer.play();
   });
 }

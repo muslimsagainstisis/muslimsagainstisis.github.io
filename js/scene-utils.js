@@ -11,6 +11,7 @@ var SCENE_CONTAINER_CSS_CLASS = 'wrapper';
 module.exports.renderHTML = function() {
 
   return SCENE_INDEX
+    .map(scene => scene.id)
     .map(function(sceneName) {
       return {
               html: require("html?attrs=false!../scenes/" + sceneName + "/scene.html"),
@@ -33,11 +34,19 @@ module.exports.renderHTML = function() {
 module.exports.getScenes = function() {
 
   return SCENE_INDEX
+    .map(scene => scene.id)
     .map(function(sceneName) { // get the scenes(which are in arrays)
       return require("json!../scenes/" + sceneName + "/scene.json")
     })
     .reduce(function(prev, current) { // flatten arrays by concating into a new array
       return prev.concat(current);
     }, []);
+
+}
+
+module.exports.getAudioConfig = function() {
+
+  return SCENE_INDEX
+    .map(scene => scene)
 
 }

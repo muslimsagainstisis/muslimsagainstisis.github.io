@@ -97,7 +97,7 @@ body {
   opacity: 0;
   display: block;
 }
-.quran-hidden strong, .emphasis {
+.quran-hidden strong, .emphasis strong {
   color: rgba(159,201,98,1);
   font-weight: 400;
 }

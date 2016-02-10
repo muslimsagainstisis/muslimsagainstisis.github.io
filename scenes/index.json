@@ -1,28 +1,163 @@
-[
-  "intro",
-  "doyoufeelmuslim",
-  "reactionstoterror",
-  "feelingconfused",
-  "outtogetyou",
-  "somethingtoprove",
-  "itisnteasy",
-  "mixedfeelings",
-  "differentpractices",
-  "yetthatsokay",
-  "itsgottoend",
-  "iwantmyislamback1",
-  "whoarethey",
-  "isisfightmisquote",
-  "isisapocalypsemisquote",
-  "isisafterlifefallacy",
-  "whatislamichistoryprefers",
-  "isisbankrupt",
-  "isiswantstodivide",
-  "complicatedsituation",
-  "battleofageneration",
-  "muslimsbelieveindividuallife",
-  "wewillprotecteachother",
-  "wearenotafraid",
-  "wearecoming",
-  "likepeace"
-]
+[{
+  "id": "intro",
+  "audio": {
+    "src": "1",
+    "max": 0.01
+  }
+}, {
+  "id": "doyoufeelmuslim",
+  "audio": {
+    "src": "1",
+    "max": 0.5
+  }
+},{
+  "id": "aboutyourself",
+  "audio": {
+    "src": "1",
+    "max": 0.5
+  }
+}, {
+  "id": "reactionstoterror",
+  "audio": {
+    "src": "2",
+    "max": 0.3
+  }
+}, {
+  "id": "feelingconfused",
+  "audio": {
+    "src": "3",
+    "max": 0.5
+  }
+}, {
+  "id": "outtogetyou",
+  "audio": {
+    "src": "3",
+    "max": 0.5
+  }
+}, {
+  "id": "somethingtoprove",
+  "audio": {
+    "src": "4",
+    "max": 0.5
+  }
+}, {
+  "id": "itisnteasy",
+  "audio": {
+    "src": "5",
+    "max": 0.5
+  }
+}, {
+  "id": "mixedfeelings",
+  "audio": {
+    "src": "6",
+    "max": 0.5
+  }
+}, {
+  "id": "differentpractices",
+  "audio": {
+    "src": "6",
+    "max": 0.5
+  }
+}, {
+  "id": "yetthatsokay",
+  "audio": {
+    "src": "6",
+    "max": 0.5
+  }
+}, {
+  "id": "itsgottoend",
+  "audio": {
+    "src": "7",
+    "max": 0.5
+  }
+}, {
+  "id": "iwantmyislamback1",
+  "audio": {
+    "src": "7",
+    "max": 0.5
+  }
+}, {
+  "id": "whoarethey",
+  "audio": {
+    "src": "7",
+    "max": 0.5
+  }
+}, {
+  "id": "isisfightmisquote",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "isisapocalypsemisquote",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "isisafterlifefallacy",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "whatislamichistoryprefers",
+  "audio": {
+    "src": "10",
+    "max": 0.2
+  }
+}, {
+  "id": "isisbankrupt",
+  "audio": {
+    "src": "10",
+    "max": 0.5
+  }
+}, {
+  "id": "isiswantstodivide",
+  "audio": {
+    "src": "7",
+    "max": 0.5
+  }
+}, {
+  "id": "complicatedsituation",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "battleofageneration",
+  "audio": {
+    "src": "9",
+    "max": 0.5
+  }
+}, {
+  "id": "muslimsbelieveindividuallife",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "wewillprotecteachother",
+  "audio": {
+    "src": "9",
+    "max": 0.5
+  }
+}, {
+  "id": "wearenotafraid",
+  "audio": {
+    "src": "8",
+    "max": 0.5
+  }
+}, {
+  "id": "wearecoming",
+  "audio": {
+    "src": "9",
+    "max": 0.5
+  }
+}, {
+  "id": "likepeace",
+  "audio": {
+    "src": "9",
+    "max": 0.01
+  }
+}]

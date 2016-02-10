@@ -65,5 +65,4 @@ module.exports.init = function() {
       isPlaying = false;
       $("#togglePlay").removeClass('fa-pause').addClass('fa-play');
     }
-
 };

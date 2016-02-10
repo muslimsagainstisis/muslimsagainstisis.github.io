@@ -1,31 +1,197 @@
-[
-{
+[{
   "wrapper": "#itisnteasy",
   "duration": "100%",
   "animations": [{
+    "selector": ".isnteasy_1",
+    "opacity": [0, 1],
+    "translateY": ["-4%", "0%"],
+    "translateX": ["3%", "0"]
+  }, {
     "selector": ".display-4",
     "opacity": [0, 1]
-  }, {
-    "selector": ".newsources",
-    "translateY": ["80%"]
   }]
-},
-{
+}, {
   "wrapper": "#itisnteasy",
   "duration": "100%",
-  "focus": true,
   "animations": [{
+    "selector": ".isnteasy_2",
+    "opacity": [0, 1],
+    "translateY": ["0%", "0%"],
+    "translateX": ["3%", "0"]
   }]
-},
- {
-  "wrapper": "#itisnteasy",
-  "duration": "500%",
-  "animations": [{
-    "selector": ".newsources",
-    "translateY": ["80%", "-450%"]
-  }
-]
 }, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_3",
+    "opacity": [0, 1],
+    "translateY": ["0%", "0%"],
+    "translateX": ["3%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_4",
+    "opacity": [0, 1],
+    "translateY": ["4%", "0%"],
+    "translateX": ["3%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_5",
+    "opacity": [0, 1],
+    "translateY": ["4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_6",
+    "opacity": [0, 1],
+    "translateY": ["4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_7",
+    "opacity": [0, 1],
+    "translateY": ["4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_8",
+    "opacity": [0, 1],
+    "translateY": ["4%", "0%"],
+    "translateX": ["-3%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_9",
+    "opacity": [0, 1],
+    "translateY": ["-4%", "0%"],
+    "translateX": ["-3%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_10",
+    "opacity": [0, 1],
+    "translateY": ["-4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_11",
+    "opacity": [0, 1],
+    "translateY": ["-4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_12",
+    "opacity": [0, 1],
+    "translateY": ["-4%", "0%"],
+    "translateX": ["0%", "0"]
+  }]
+}
+
+, {
+"wrapper": "#itisnteasy",
+"duration": "100%",
+"focus": true,
+"animations": []
+}
+
+
+
+, {
+  "wrapper": "#itisnteasy",
+  "duration": "100%",
+  "animations": [{
+    "selector": ".isnteasy_13",
+    "opacity": [0, 1],
+    "translateY": ["0%", "0%"],
+    "translateX": ["-80%", "0"]
+  }, {
+    "selector": ".isnteasy_1",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-40%"],
+    "translateX": ["0%", "30%"]
+  }, {
+    "selector": ".isnteasy_2",
+    "opacity": [1, 0],
+    "translateY": ["0%", "0%"],
+    "translateX": ["0%", "30%"]
+  }, {
+    "selector": ".isnteasy_3",
+    "opacity": [1, 0],
+    "translateY": ["0%", "0%"],
+    "translateX": ["0%", "30%"]
+  }, {
+    "selector": ".isnteasy_4",
+    "opacity": [1, 0],
+    "translateY": ["0%", "40%"],
+    "translateX": ["0%", "30%"]
+  }, {
+    "selector": ".isnteasy_5",
+    "opacity": [1, 0],
+    "translateY": ["0%", "40%"],
+    "translateX": ["0%", "0%"]
+  }, {
+    "selector": ".isnteasy_6",
+    "opacity": [1, 0],
+    "translateY": ["0%", "40%"],
+    "translateX": ["0%", "0%"]
+  }, {
+    "selector": ".isnteasy_7",
+    "opacity": [1, 0],
+    "translateY": ["0%", "40%"],
+    "translateX": ["0%", "0%"]
+  }, {
+    "selector": ".isnteasy_8",
+    "opacity": [1, 0],
+    "translateY": ["0%", "40%"],
+    "translateX": ["0%", "-30%"]
+  }, {
+    "selector": ".isnteasy_9",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-40%"],
+    "translateX": ["0%", "-30%"]
+  }, {
+    "selector": ".isnteasy_10",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-40%"],
+    "translateX": ["0%", "0%"]
+  }, {
+    "selector": ".isnteasy_11",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-40%"],
+    "translateX": ["0%", "0%"]
+  }, {
+    "selector": ".isnteasy_12",
+    "opacity": [1, 0],
+    "translateY": ["0%", "-40%"],
+    "translateX": ["0%", "0%"]
+  }]
+}
+
+, {
   "wrapper": "#itisnteasy",
   "duration": "80%",
   "animations": [{
@@ -36,17 +202,21 @@
     "opacity": [1, 0]
   }, {
     "selector": ".trump",
-    "translateX": [0, "-20%"],
-    "translateY": [0, "10%"],
+    "translateX": [0, "-7%"],
     "scale": [1, 2]
   }]
-},{
+}
+
+
+
+, {
   "wrapper": "#itisnteasy",
   "duration": "100%",
   "focus": true,
-  "animations": [{
-  }]
-}, {
+  "animations": [{}]
+}
+
+, {
   "wrapper": "#itisnteasy",
   "duration": "300%",
   "animations": [{
@@ -54,4 +224,6 @@
     "translateX": ["-20%"],
     "opacity": [1, 0]
   }]
-}]
+}
+
+]

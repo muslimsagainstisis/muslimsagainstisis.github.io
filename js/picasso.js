@@ -1,25 +1,34 @@
-var Rx = require('rx');
-
-var videoPlayer = require('./videoplayer.js');
+const Rx = require('rx');
+const audioplayer = require('./audioplayer.js');
+const videoPlayer = require('./videoplayer.js');
 
     /*  Globals
     -------------------------------------------------- */
     var PROPERTIES =               ['translateX', 'translateY', 'opacity', 'rotate', 'scale'],
+
         $window =                  $(window),
         $body =                    $('body'),
+        $bodyhtml =                $('body,html'),
         $experienceIndicator =     $('#experience-progress .progress'),
+
         wrappers =                 [],
         currentWrapper =           null,
+
         scrollTimeoutID =          0,
-        bodyHeight =               0,
+
         windowHeight =             0,
         windowWidth =              0,
-        prevKeyframesDurations =   0,
+
         scrollTop =                0,
-        relativeScrollTop =        0,
+
+        keyframes,
+        prevKeyframesDurations =   0,
         currentKeyframe =          0,
+
         frameFocus =               [],
         currentFocus =             0;
+        window.relativeScrollTop =        0;
+        window.bodyHeight =               0;
 
 
     /*  Construction
@@ -28,10 +37,11 @@ var videoPlayer = require('./videoplayer.js');
       keyframes = message;
       updatePage();
       setupValues();
-      $window.resize(throwError)
+      $window.resize(throwError);
       if(isTouchDevice) {
         $window.resize(throwError)
       }
+
     };
 
     var setupValues = function() {
@@ -57,7 +67,7 @@ var videoPlayer = require('./videoplayer.js');
           }
           for(j=0;j<keyframes[i].animations.length;j++) { // loop animations
             Object.keys(keyframes[i].animations[j]).forEach(function(key) { // loop properties
-              value = keyframes[i].animations[j][key];
+              var value = keyframes[i].animations[j][key];
               if(key !== 'selector' && value instanceof Array === false) {
                 var valueSet = [];
                 valueSet.push(getDefaultPropertyValue(key), value);
@@ -75,7 +85,7 @@ var videoPlayer = require('./videoplayer.js');
         return a;
       },[]);
       $window.scroll(0);
-      currentWrapper = wrappers[0];
+      setCurrentWrapper(wrappers[0])
       $(wrappers[0]).show();
       showCurrentWrappers(true);
     };
@@ -86,7 +96,7 @@ var videoPlayer = require('./videoplayer.js');
         keyframes[i].duration = convertPercentToPx(keyframes[i].duration, 'y');
         for(j=0;j<keyframes[i].animations.length;j++) { // loop animations
           Object.keys(keyframes[i].animations[j]).forEach(function(key) { // loop properties
-            value = keyframes[i].animations[j][key];
+            var value = keyframes[i].animations[j][key];
             if(key !== 'selector') {
               if(value instanceof Array) { // if its an array
                 for(k=0;k<value.length;k++) { // if value in array is %
@@ -152,9 +162,9 @@ var videoPlayer = require('./videoplayer.js');
     }
     function buildScrollBarCenters() {
       frameFocus
-        .map(function(center) { return (center / bodyHeight).toFixed(2) * 100 })
-        .map(function(centerPercent) { return centerPercent + "vh" })
-        .map(function(centerVh) {
+        .map((center) => (center / bodyHeight).toFixed(2) * 100)
+        .map((centerPercent) => centerPercent + "vh" )
+        .map((centerVh) => {
           $("#experience-progress")
             .append('<div class="center-marker" style="top:'+ centerVh +'"></div>');
         });
@@ -176,7 +186,7 @@ var videoPlayer = require('./videoplayer.js');
 
         $(animation.selector).css({
           'transform':    'translate3d(' + translateX +'px, ' + translateY + 'px, 0) scale('+ scale +') rotate('+ rotate +'deg)',
-          'opacity' : opacity
+          'opacity' : opacity.toFixed(2)
         });
 
       }
@@ -243,7 +253,7 @@ var videoPlayer = require('./videoplayer.js');
           videoPlayer.stop($newVideo);
         }
 
-        currentWrapper = keyframes[currentKeyframe].wrapper;
+        setCurrentWrapper(keyframes[currentKeyframe].wrapper);
       }
     };
 
@@ -285,7 +295,7 @@ var videoPlayer = require('./videoplayer.js');
 
     function renderScroll(scroll) {
       console.log("RENDER", scroll, Math.floor($window.scrollTop()))
-        $body.animate({ scrollTop: scroll }, 1500, 'linear');
+        $bodyhtml.animate({ scrollTop: scroll }, 1500, 'linear');
     }
 
     function getSlideLocation() {
@@ -301,6 +311,15 @@ var videoPlayer = require('./videoplayer.js');
       return [0];
     }
 
+    function renderMusic(wrapperId) {
+      audioplayer.next(wrapperId.substr(1));
+    }
+
+    function setCurrentWrapper(wrapperId) {
+      currentWrapper = wrapperId;
+      renderMusic(currentWrapper);
+    }
+
     Number.prototype.between = function(a, b) {
       var min = Math.min.apply(Math, [a, b]),
         max = Math.max.apply(Math, [a, b]);
@@ -311,6 +330,7 @@ var videoPlayer = require('./videoplayer.js');
     -------------------------------------------------- */
 
     var convertPercentToPx = function(value, axis) {
+      console.log(value);
       if(typeof value === "string" && value.match(/%/g)) {
         if(axis === 'y') value = (parseFloat(value) / 100) * windowHeight;
         if(axis === 'x') value = (parseFloat(value) / 100) * windowWidth;

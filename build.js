@@ -44,2900 +44,406 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var animator = __webpack_require__(1);
-	var controls = __webpack_require__(67);
+	'use strict';
 
-	var sceneUtils = __webpack_require__(2);
+	var animator = __webpack_require__(1);
+	var controls = __webpack_require__(10);
+
+	var sceneUtils = __webpack_require__(11);
+	var audioplayer = __webpack_require__(5);
 
 	var sceneHtmlString = sceneUtils.renderHTML();
 	var sceneMotionMap = sceneUtils.getScenes();
+	var sceneAudioConfig = sceneUtils.getAudioConfig();
 
+	audioplayer.config(sceneAudioConfig);
 
-	$(function() {
+	$(function () {
 
-	      var ua = navigator.userAgent;
+	  var ua = navigator.userAgent;
 
-	      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua))
-	         $('#unsupported').show();
+	  // if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua))
+	  //  $('#unsupported').show();
 
-	      else if (/Chrome/i.test(ua))
-	        init();
+	  // else if (/Chrome/i.test(ua))
+	  init();
 
-	      else
-	         $('#unsupported').show();
-
+	  // else
+	  //  $('#unsupported').show();
 	});
 
 	function init() {
-	  $(window).on("load", function() {
+	  $(window).on("load", function () {
 	    $('.container-inner').html(sceneHtmlString);
 	    animator.init(sceneMotionMap);
 	    controls.init();
 	    $('.loading').hide();
+	    audioplayer.play();
 	  });
 	}
-
 
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Rx = __webpack_require__(70);
+	'use strict';
 
-	var videoPlayer = __webpack_require__(64);
+	var Rx = __webpack_require__(2);
+	var audioplayer = __webpack_require__(5);
+	var videoPlayer = __webpack_require__(9);
 
-	    /*  Globals
-	    -------------------------------------------------- */
-	    var PROPERTIES =               ['translateX', 'translateY', 'opacity', 'rotate', 'scale'],
-	        $window =                  $(window),
-	        $body =                    $('body'),
-	        $experienceIndicator =     $('#experience-progress .progress'),
-	        wrappers =                 [],
-	        currentWrapper =           null,
-	        scrollTimeoutID =          0,
-	        bodyHeight =               0,
-	        windowHeight =             0,
-	        windowWidth =              0,
-	        prevKeyframesDurations =   0,
-	        scrollTop =                0,
-	        relativeScrollTop =        0,
-	        currentKeyframe =          0,
-	        frameFocus =               [],
-	        currentFocus =             0;
+	/*  Globals
+	-------------------------------------------------- */
+	var PROPERTIES = ['translateX', 'translateY', 'opacity', 'rotate', 'scale'],
+	    $window = $(window),
+	    $body = $('body'),
+	    $bodyhtml = $('body,html'),
+	    $experienceIndicator = $('#experience-progress .progress'),
+	    wrappers = [],
+	    currentWrapper = null,
+	    scrollTimeoutID = 0,
+	    windowHeight = 0,
+	    windowWidth = 0,
+	    scrollTop = 0,
+	    keyframes,
+	    prevKeyframesDurations = 0,
+	    currentKeyframe = 0,
+	    frameFocus = [],
+	    currentFocus = 0;
+	window.relativeScrollTop = 0;
+	window.bodyHeight = 0;
 
+	/*  Construction
+	-------------------------------------------------- */
+	module.exports.init = function (message) {
+	  keyframes = message;
+	  updatePage();
+	  setupValues();
+	  $window.resize(throwError);
+	  if (isTouchDevice) {
+	    $window.resize(throwError);
+	  }
+	};
 
-	    /*  Construction
-	    -------------------------------------------------- */
-	    module.exports.init = function(message) {
-	      keyframes = message;
-	      updatePage();
-	      setupValues();
-	      $window.resize(throwError)
-	      if(isTouchDevice) {
-	        $window.resize(throwError)
+	var setupValues = function setupValues() {
+	  scrollTop = Math.floor($window.scrollTop());
+	  windowHeight = $window.height();
+	  windowWidth = $window.width();
+	  convertAllPropsToPx();
+	  buildPage();
+	  buildScrollBarCenters();
+	};
+
+	var buildPage = function buildPage() {
+	  var i,
+	      j,
+	      k,
+	      initFrames = [];
+	  for (i = 0; i < keyframes.length; i++) {
+	    // loop keyframes
+	    if (keyframes[i].focus) {
+	      if (bodyHeight !== initFrames[initFrames.length - 1]) {
+	        initFrames.push(bodyHeight);
 	      }
-	    };
-
-	    var setupValues = function() {
-	      scrollTop = Math.floor($window.scrollTop());
-	      windowHeight = $window.height();
-	      windowWidth = $window.width();
-	      convertAllPropsToPx();
-	      buildPage();
-	      buildScrollBarCenters();
-	    };
-
-	    var buildPage = function() {
-	      var i, j, k, initFrames = [];
-	      for(i=0;i<keyframes.length;i++) { // loop keyframes
-	          if(keyframes[i].focus) {
-	              if(bodyHeight !== initFrames[initFrames.length - 1]) {
-	                initFrames.push(bodyHeight);
-	              }
-	          }
-	          bodyHeight += keyframes[i].duration;
-	          if($.inArray(keyframes[i].wrapper, wrappers) == -1) {
-	            wrappers.push(keyframes[i].wrapper);
-	          }
-	          for(j=0;j<keyframes[i].animations.length;j++) { // loop animations
-	            Object.keys(keyframes[i].animations[j]).forEach(function(key) { // loop properties
-	              value = keyframes[i].animations[j][key];
-	              if(key !== 'selector' && value instanceof Array === false) {
-	                var valueSet = [];
-	                valueSet.push(getDefaultPropertyValue(key), value);
-	                value = valueSet;
-	              }
-	              keyframes[i].animations[j][key] = value;
-	            });
-	          }
-	      }
-	      $body.height(bodyHeight);
-	      frameFocus = initFrames.map(function(i){
-	        return Math.floor(i);
-	      }).reduce(function(a,b){
-	        if (a.indexOf(b) < 0 ) a.push(b);
-	        return a;
-	      },[]);
-	      $window.scroll(0);
-	      currentWrapper = wrappers[0];
-	      $(wrappers[0]).show();
-	      showCurrentWrappers(true);
-	    };
-
-	    var convertAllPropsToPx = function() {
-	      var i, j, k;
-	      for(i=0;i<keyframes.length;i++) { // loop keyframes
-	        keyframes[i].duration = convertPercentToPx(keyframes[i].duration, 'y');
-	        for(j=0;j<keyframes[i].animations.length;j++) { // loop animations
-	          Object.keys(keyframes[i].animations[j]).forEach(function(key) { // loop properties
-	            value = keyframes[i].animations[j][key];
-	            if(key !== 'selector') {
-	              if(value instanceof Array) { // if its an array
-	                for(k=0;k<value.length;k++) { // if value in array is %
-	                  if(typeof value[k] === "string") {
-	                    if(key === 'translateY') {
-	                      value[k] = convertPercentToPx(value[k], 'y');
-	                    } else {
-	                      value[k] = convertPercentToPx(value[k], 'x');
-	                    }
-	                  }
-	                }
-	              } else {
-	                if(typeof value === "string") { // if single value is a %
-	                  if(key === 'translateY') {
-	                    value = convertPercentToPx(value, 'y');
-	                  } else {
-	                    value = convertPercentToPx(value, 'x');
-	                  }
-	                }
-	              }
-	              keyframes[i].animations[j][key] = value;
-	            }
-	          });
+	    }
+	    bodyHeight += keyframes[i].duration;
+	    if ($.inArray(keyframes[i].wrapper, wrappers) == -1) {
+	      wrappers.push(keyframes[i].wrapper);
+	    }
+	    for (j = 0; j < keyframes[i].animations.length; j++) {
+	      // loop animations
+	      Object.keys(keyframes[i].animations[j]).forEach(function (key) {
+	        // loop properties
+	        var value = keyframes[i].animations[j][key];
+	        if (key !== 'selector' && value instanceof Array === false) {
+	          var valueSet = [];
+	          valueSet.push(getDefaultPropertyValue(key), value);
+	          value = valueSet;
 	        }
-	      }
-	    };
-
-	    var getDefaultPropertyValue = function(property) {
-	      switch (property) {
-	        case 'translateX':
-	          return 0;
-	        case 'translateY':
-	          return 0;
-	        case 'scale':
-	          return 1;
-	        case 'rotate':
-	          return 0;
-	        case 'opacity':
-	          return 1;
-	        default:
-	          return null;
-	      }
-	    };
-
-	    /*  Animation/Scrolling
-	    -------------------------------------------------- */
-	    var updatePage = function() {
-	      window.requestAnimationFrame(function() {
-	        setScrollTops();
-	        if(scrollTop > 0 && scrollTop <= (bodyHeight - windowHeight)) {
-	          animateElements();
-	          setKeyframe();
-	          animateScrollBar();
-	        }
-	        updatePage();
+	        keyframes[i].animations[j][key] = value;
 	      });
-	    };
-	    function animateScrollBar() {
-	      var percent = (scrollTop / bodyHeight).toFixed(2) * 100;
-	      $experienceIndicator.css({
-	          'transform':    'translateY(' + percent + '%)'
-	        });
 	    }
-	    function buildScrollBarCenters() {
-	      frameFocus
-	        .map(function(center) { return (center / bodyHeight).toFixed(2) * 100 })
-	        .map(function(centerPercent) { return centerPercent + "vh" })
-	        .map(function(centerVh) {
-	          $("#experience-progress")
-	            .append('<div class="center-marker" style="top:'+ centerVh +'"></div>');
-	        });
-	    }
-	    var setScrollTops = function() {
-	      scrollTop = Math.floor($window.scrollTop());
-	      relativeScrollTop = scrollTop - prevKeyframesDurations;
-	    };
+	  }
+	  $body.height(bodyHeight);
+	  frameFocus = initFrames.map(function (i) {
+	    return Math.floor(i);
+	  }).reduce(function (a, b) {
+	    if (a.indexOf(b) < 0) a.push(b);
+	    return a;
+	  }, []);
+	  $window.scroll(0);
+	  setCurrentWrapper(wrappers[0]);
+	  $(wrappers[0]).show();
+	  showCurrentWrappers(true);
+	};
 
-	    var animateElements = function() {
-	      var animation, translateY, translateX, scale, rotate, opacity;
-	      for(var i=0;i<keyframes[currentKeyframe].animations.length;i++) {
-	        animation   = keyframes[currentKeyframe].animations[i];
-	        translateY  = calcPropValue(animation, 'translateY');
-	        translateX  = calcPropValue(animation, 'translateX');
-	        scale       = calcPropValue(animation, 'scale');
-	        rotate      = calcPropValue(animation, 'rotate');
-	        opacity     = calcPropValue(animation, 'opacity');
-
-	        $(animation.selector).css({
-	          'transform':    'translate3d(' + translateX +'px, ' + translateY + 'px, 0) scale('+ scale +') rotate('+ rotate +'deg)',
-	          'opacity' : opacity
-	        });
-
-	      }
-	    };
-
-	    var calcPropValue = function(animation, property) {
-	      var value = animation[property];
-	      if(value) {
-	        value = easeInOutQuad(relativeScrollTop, value[0], (value[1]-value[0]), keyframes[currentKeyframe].duration);
-	      } else {
-	        value = getDefaultPropertyValue(property);
-	      }
-	      // value = +value.toFixed(2)
-	      // TEMPORARILY REMOVED CAUSE SCALE DOESN'T WORK WITHA AGRESSIVE ROUNDING LIKE THIS
-	      return value;
-	    };
-
-	    var easeInOutQuad = function (t, b, c, d) {
-	      //sinusoadial in and out
-	      return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
-	    };
-
-	    var setKeyframe = function() {
-	      if(scrollTop > (keyframes[currentKeyframe].duration + prevKeyframesDurations)) {
-	          prevKeyframesDurations += keyframes[currentKeyframe].duration;
-	          currentKeyframe++;
-	          showCurrentWrappers();
-	      } else if(scrollTop < prevKeyframesDurations) {
-	          currentKeyframe--;
-	          prevKeyframesDurations -= keyframes[currentKeyframe].duration;
-	          showCurrentWrappers();
-	      }
-	    };
-
-	    var showCurrentWrappers = function(init) {
-	      var i;
-	      if(init) {
-	        var $newVideo = $('video', keyframes[currentKeyframe].wrapper);
-
-	        if($newVideo[0]) {
-	          $newVideo[0].play();
-	          $newVideo.animate({volume: 1}, 300, 'swing');
-	          requestVideo();
+	var convertAllPropsToPx = function convertAllPropsToPx() {
+	  var i, j, k;
+	  for (i = 0; i < keyframes.length; i++) {
+	    // loop keyframes
+	    keyframes[i].duration = convertPercentToPx(keyframes[i].duration, 'y');
+	    for (j = 0; j < keyframes[i].animations.length; j++) {
+	      // loop animations
+	      Object.keys(keyframes[i].animations[j]).forEach(function (key) {
+	        // loop properties
+	        var value = keyframes[i].animations[j][key];
+	        if (key !== 'selector') {
+	          if (value instanceof Array) {
+	            // if its an array
+	            for (k = 0; k < value.length; k++) {
+	              // if value in array is %
+	              if (typeof value[k] === "string") {
+	                if (key === 'translateY') {
+	                  value[k] = convertPercentToPx(value[k], 'y');
+	                } else {
+	                  value[k] = convertPercentToPx(value[k], 'x');
+	                }
+	              }
+	            }
+	          } else {
+	            if (typeof value === "string") {
+	              // if single value is a %
+	              if (key === 'translateY') {
+	                value = convertPercentToPx(value, 'y');
+	              } else {
+	                value = convertPercentToPx(value, 'x');
+	              }
+	            }
+	          }
+	          keyframes[i].animations[j][key] = value;
 	        }
-	      }
-	      if(keyframes[currentKeyframe].wrapper != currentWrapper) {
-	        $(currentWrapper).hide();
-
-	        $('video', currentWrapper).animate({volume: 0}, 300, 'swing', function() {
-	          // really stop the music
-	          $(this).get(0).pause();
-	        });
-
-
-	        $(keyframes[currentKeyframe].wrapper).show();
-
-	        $newVideo = $('video', keyframes[currentKeyframe].wrapper);
-
-	        if($newVideo[0]) {
-	          $newVideo[0].play();
-	          $newVideo.animate({ volume: $newVideo.attr('max-volume') || 1 }, 300, 'swing');
-	          videoPlayer.start($newVideo);
-	        } else {
-	          videoPlayer.stop($newVideo);
-	        }
-
-	        currentWrapper = keyframes[currentKeyframe].wrapper;
-	      }
-	    };
-
-	    module.exports.action = function(action) {
-	      switch(action) {
-	        case 'next':
-	          nextFocus();
-	          break;
-	        case 'previous':
-	          previousFocus();
-	          break;
-	        default:
-	          break;
-	      }
+	      });
 	    }
-	    function nextFocus() {
-	      var getScroll = getSlideLocation();
-	      console.log("NEXT FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0]], scrollTop, frameFocus);
-	      if(getScroll.length === 1) {
-	        console.log("JUST ONE", frameFocus[getScroll[0] + 1])
-	        renderScroll(frameFocus[getScroll[0] + 1]);
-	      } else if(getScroll.length === 2) {
-	        console.log("TWO")
-	        renderScroll(frameFocus[getScroll[1]]);
-	      }
+	  }
+	};
+
+	var getDefaultPropertyValue = function getDefaultPropertyValue(property) {
+	  switch (property) {
+	    case 'translateX':
+	      return 0;
+	    case 'translateY':
+	      return 0;
+	    case 'scale':
+	      return 1;
+	    case 'rotate':
+	      return 0;
+	    case 'opacity':
+	      return 1;
+	    default:
+	      return null;
+	  }
+	};
+
+	/*  Animation/Scrolling
+	-------------------------------------------------- */
+	var updatePage = function updatePage() {
+	  window.requestAnimationFrame(function () {
+	    setScrollTops();
+	    if (scrollTop > 0 && scrollTop <= bodyHeight - windowHeight) {
+	      animateElements();
+	      setKeyframe();
+	      animateScrollBar();
+	    }
+	    updatePage();
+	  });
+	};
+	function animateScrollBar() {
+	  var percent = (scrollTop / bodyHeight).toFixed(2) * 100;
+	  $experienceIndicator.css({
+	    'transform': 'translateY(' + percent + '%)'
+	  });
+	}
+	function buildScrollBarCenters() {
+	  frameFocus.map(function (center) {
+	    return (center / bodyHeight).toFixed(2) * 100;
+	  }).map(function (centerPercent) {
+	    return centerPercent + "vh";
+	  }).map(function (centerVh) {
+	    $("#experience-progress").append('<div class="center-marker" style="top:' + centerVh + '"></div>');
+	  });
+	}
+	var setScrollTops = function setScrollTops() {
+	  scrollTop = Math.floor($window.scrollTop());
+	  relativeScrollTop = scrollTop - prevKeyframesDurations;
+	};
+
+	var animateElements = function animateElements() {
+	  var animation, translateY, translateX, scale, rotate, opacity;
+	  for (var i = 0; i < keyframes[currentKeyframe].animations.length; i++) {
+	    animation = keyframes[currentKeyframe].animations[i];
+	    translateY = calcPropValue(animation, 'translateY');
+	    translateX = calcPropValue(animation, 'translateX');
+	    scale = calcPropValue(animation, 'scale');
+	    rotate = calcPropValue(animation, 'rotate');
+	    opacity = calcPropValue(animation, 'opacity');
+
+	    $(animation.selector).css({
+	      'transform': 'translate3d(' + translateX + 'px, ' + translateY + 'px, 0) scale(' + scale + ') rotate(' + rotate + 'deg)',
+	      'opacity': opacity.toFixed(2)
+	    });
+	  }
+	};
+
+	var calcPropValue = function calcPropValue(animation, property) {
+	  var value = animation[property];
+	  if (value) {
+	    value = easeInOutQuad(relativeScrollTop, value[0], value[1] - value[0], keyframes[currentKeyframe].duration);
+	  } else {
+	    value = getDefaultPropertyValue(property);
+	  }
+	  // value = +value.toFixed(2)
+	  // TEMPORARILY REMOVED CAUSE SCALE DOESN'T WORK WITHA AGRESSIVE ROUNDING LIKE THIS
+	  return value;
+	};
+
+	var easeInOutQuad = function easeInOutQuad(t, b, c, d) {
+	  //sinusoadial in and out
+	  return -c / 2 * (Math.cos(Math.PI * t / d) - 1) + b;
+	};
+
+	var setKeyframe = function setKeyframe() {
+	  if (scrollTop > keyframes[currentKeyframe].duration + prevKeyframesDurations) {
+	    prevKeyframesDurations += keyframes[currentKeyframe].duration;
+	    currentKeyframe++;
+	    showCurrentWrappers();
+	  } else if (scrollTop < prevKeyframesDurations) {
+	    currentKeyframe--;
+	    prevKeyframesDurations -= keyframes[currentKeyframe].duration;
+	    showCurrentWrappers();
+	  }
+	};
+
+	var showCurrentWrappers = function showCurrentWrappers(init) {
+	  var i;
+	  if (init) {
+	    var $newVideo = $('video', keyframes[currentKeyframe].wrapper);
+
+	    if ($newVideo[0]) {
+	      $newVideo[0].play();
+	      $newVideo.animate({ volume: 1 }, 300, 'swing');
+	      requestVideo();
+	    }
+	  }
+	  if (keyframes[currentKeyframe].wrapper != currentWrapper) {
+	    $(currentWrapper).hide();
+
+	    $('video', currentWrapper).animate({ volume: 0 }, 300, 'swing', function () {
+	      // really stop the music
+	      $(this).get(0).pause();
+	    });
+
+	    $(keyframes[currentKeyframe].wrapper).show();
+
+	    $newVideo = $('video', keyframes[currentKeyframe].wrapper);
+
+	    if ($newVideo[0]) {
+	      $newVideo[0].play();
+	      $newVideo.animate({ volume: $newVideo.attr('max-volume') || 1 }, 300, 'swing');
+	      videoPlayer.start($newVideo);
+	    } else {
+	      videoPlayer.stop($newVideo);
 	    }
 
-	    function previousFocus() {
-	      var getScroll = getSlideLocation();
-	      console.log("PREVIOUS FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0] - 1], scrollTop);
-	      if(getScroll.length === 1) {
-	        console.log("JUST ONE", frameFocus[getScroll[0] - 1])
-	        renderScroll(frameFocus[getScroll[0] - 1]);
-	      } else if(getScroll.length === 2) {
-	        console.log("TWO");
-	        renderScroll(frameFocus[getScroll[0]]);
-	      }
+	    setCurrentWrapper(keyframes[currentKeyframe].wrapper);
+	  }
+	};
+
+	module.exports.action = function (action) {
+	  switch (action) {
+	    case 'next':
+	      nextFocus();
+	      break;
+	    case 'previous':
+	      previousFocus();
+	      break;
+	    default:
+	      break;
+	  }
+	};
+	function nextFocus() {
+	  var getScroll = getSlideLocation();
+	  console.log("NEXT FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0]], scrollTop, frameFocus);
+	  if (getScroll.length === 1) {
+	    console.log("JUST ONE", frameFocus[getScroll[0] + 1]);
+	    renderScroll(frameFocus[getScroll[0] + 1]);
+	  } else if (getScroll.length === 2) {
+	    console.log("TWO");
+	    renderScroll(frameFocus[getScroll[1]]);
+	  }
+	}
+
+	function previousFocus() {
+	  var getScroll = getSlideLocation();
+	  console.log("PREVIOUS FOCUS", getScroll, getScroll.length, frameFocus[getScroll[1]], frameFocus[getScroll[0] - 1], scrollTop);
+	  if (getScroll.length === 1) {
+	    console.log("JUST ONE", frameFocus[getScroll[0] - 1]);
+	    renderScroll(frameFocus[getScroll[0] - 1]);
+	  } else if (getScroll.length === 2) {
+	    console.log("TWO");
+	    renderScroll(frameFocus[getScroll[0]]);
+	  }
+	}
+
+	function renderScroll(scroll) {
+	  console.log("RENDER", scroll, Math.floor($window.scrollTop()));
+	  $bodyhtml.animate({ scrollTop: scroll }, 1500, 'linear');
+	}
+
+	function getSlideLocation() {
+	  setScrollTops();
+	  for (var x = 1; x <= frameFocus.length; x++) {
+	    if (frameFocus[x] === scrollTop) {
+	      return [x];
 	    }
-
-	    function renderScroll(scroll) {
-	      console.log("RENDER", scroll, Math.floor($window.scrollTop()))
-	        $body.animate({ scrollTop: scroll }, 1500, 'linear');
+	    if (scrollTop.between(frameFocus[x - 1], frameFocus[x])) {
+	      return [x - 1, x];
 	    }
+	  }
+	  return [0];
+	}
 
-	    function getSlideLocation() {
-	      setScrollTops();
-	      for(var x=1; x <= frameFocus.length; x++) {
-	        if(frameFocus[x] === scrollTop) {
-	          return [x];
-	        }
-	        if(scrollTop.between(frameFocus[x-1],frameFocus[x])) {
-	          return [x-1,x];
-	        }
-	      }
-	      return [0];
-	    }
+	function renderMusic(wrapperId) {
+	  audioplayer.next(wrapperId.substr(1));
+	}
 
-	    Number.prototype.between = function(a, b) {
-	      var min = Math.min.apply(Math, [a, b]),
-	        max = Math.max.apply(Math, [a, b]);
-	      return this > min && this < max;
-	    };
+	function setCurrentWrapper(wrapperId) {
+	  currentWrapper = wrapperId;
+	  renderMusic(currentWrapper);
+	}
 
-	    /*  Helpers
-	    -------------------------------------------------- */
+	Number.prototype.between = function (a, b) {
+	  var min = Math.min.apply(Math, [a, b]),
+	      max = Math.max.apply(Math, [a, b]);
+	  return this > min && this < max;
+	};
 
-	    var convertPercentToPx = function(value, axis) {
-	      if(typeof value === "string" && value.match(/%/g)) {
-	        if(axis === 'y') value = (parseFloat(value) / 100) * windowHeight;
-	        if(axis === 'x') value = (parseFloat(value) / 100) * windowWidth;
-	      }
-	      if(typeof value === "string" && value.match(/v/g)) {
-	        if(axis === 'y') value = (parseFloat(value) / 100) * windowHeight;
-	        if(axis === 'x') value = (parseFloat(value) / 100) * windowWidth;
-	      }
-	      return value;
-	    };
+	/*  Helpers
+	-------------------------------------------------- */
 
-	    var throwError = function() {
-	      $body.addClass('page-error')
-	    };
+	var convertPercentToPx = function convertPercentToPx(value, axis) {
+	  console.log(value);
+	  if (typeof value === "string" && value.match(/%/g)) {
+	    if (axis === 'y') value = parseFloat(value) / 100 * windowHeight;
+	    if (axis === 'x') value = parseFloat(value) / 100 * windowWidth;
+	  }
+	  if (typeof value === "string" && value.match(/v/g)) {
+	    if (axis === 'y') value = parseFloat(value) / 100 * windowHeight;
+	    if (axis === 'x') value = parseFloat(value) / 100 * windowWidth;
+	  }
+	  return value;
+	};
 
-	    var isTouchDevice = function() {
-	      return 'ontouchstart' in window // works on most browsers
-	      || 'onmsgesturechange' in window; // works on ie10
-	    };
+	var throwError = function throwError() {
+	  $body.addClass('page-error');
+	};
 
+	var isTouchDevice = function isTouchDevice() {
+	  return 'ontouchstart' in window // works on most browsers
+	   || 'onmsgesturechange' in window; // works on ie10
+	};
 
 /***/ },
 /* 2 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// NOTE: This file relies heavily on webpack for requires of html and json config files.
-
-	// Constants
-	var SCENE_INDEX = __webpack_require__(3);
-	var SCENE_CONTAINER_CSS_CLASS = 'wrapper';
-
-	/*
-	 * Generates an HTML string from scene.html files the scenes folder.
-	 * Creates a wrapper div that provides feedback.
-	 */
-	module.exports.renderHTML = function() {
-
-	  return SCENE_INDEX
-	    .map(function(sceneName) {
-	      return {
-	              html: __webpack_require__(4)("./" + sceneName + "/scene.html"),
-	              name: sceneName
-	            }
-	    })
-	    .map(function(sceneObject) { // Create wrapper div for html
-	        var $wrapper = document.createElement('div');
-	        $wrapper.classList.add(SCENE_CONTAINER_CSS_CLASS);
-	        $wrapper.setAttribute('id', sceneObject.name);
-	        $wrapper.innerHTML = sceneObject.html;
-	        return $wrapper.outerHTML;
-	    })
-	    .reduce(function(prev, next) { // Concat to 1 html string
-	      return prev + next;
-	    }, '');
-
-	}
-
-	module.exports.getScenes = function() {
-
-	  return SCENE_INDEX
-	    .map(function(sceneName) { // get the scenes(which are in arrays)
-	      return __webpack_require__(32)("./" + sceneName + "/scene.json")
-	    })
-	    .reduce(function(prev, current) { // flatten arrays by concating into a new array
-	      return prev.concat(current);
-	    }, []);
-
-	}
-
-
-/***/ },
-/* 3 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		"intro",
-		"doyoufeelmuslim",
-		"reactionstoterror",
-		"feelingconfused",
-		"outtogetyou",
-		"somethingtoprove",
-		"itisnteasy",
-		"mixedfeelings",
-		"differentpractices",
-		"yetthatsokay",
-		"itsgottoend",
-		"iwantmyislamback1",
-		"whoarethey",
-		"isisfightmisquote",
-		"isisapocalypsemisquote",
-		"isisafterlifefallacy",
-		"whatislamichistoryprefers",
-		"isisbankrupt",
-		"isiswantstodivide",
-		"complicatedsituation",
-		"battleofageneration",
-		"muslimsbelieveindividuallife",
-		"wewillprotecteachother",
-		"wearenotafraid",
-		"wearecoming",
-		"likepeace"
-	];
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var map = {
-		"./battleofageneration/scene.html": 5,
-		"./complicatedsituation/scene.html": 6,
-		"./differentpractices/scene.html": 65,
-		"./doyoufeelmuslim/scene.html": 7,
-		"./explosion/scene.html": 8,
-		"./feelingconfused/scene.html": 9,
-		"./intro/scene.html": 62,
-		"./isisafterlifefallacy/scene.html": 10,
-		"./isisapocalypsemisquote/scene.html": 11,
-		"./isisbankrupt/scene.html": 12,
-		"./isisfightmisquote/scene.html": 13,
-		"./isisobjective/scene.html": 14,
-		"./isiswantstodivide/scene.html": 15,
-		"./itisnteasy/scene.html": 16,
-		"./itsgottoend/scene.html": 17,
-		"./iwantmyislamback1/scene.html": 18,
-		"./likepeace/scene.html": 19,
-		"./mixedfeelings/scene.html": 20,
-		"./muslimsbelieveindividuallife/scene.html": 21,
-		"./outtogetyou/scene.html": 22,
-		"./reactionstoterror/scene.html": 23,
-		"./somethingtoprove/scene.html": 24,
-		"./wearecoming/scene.html": 25,
-		"./wearenotafraid/scene.html": 26,
-		"./wewillprotecteachother/scene.html": 27,
-		"./whatislamichistoryprefers/scene.html": 28,
-		"./whatthequranprefers/scene.html": 29,
-		"./whoarethey/scene.html": 30,
-		"./withallthehatred/scene.html": 31,
-		"./yetthatsokay/scene.html": 68
-	};
-	function webpackContext(req) {
-		return __webpack_require__(webpackContextResolve(req));
-	};
-	function webpackContextResolve(req) {
-		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
-	};
-	webpackContext.keys = function webpackContextKeys() {
-		return Object.keys(map);
-	};
-	webpackContext.resolve = webpackContextResolve;
-	module.exports = webpackContext;
-	webpackContext.id = 4;
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"battle-of-a-generation grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">...but we must begin our fight for this generation.</div>\n  \t\t</div>\n\t</div>\n</div>";
-
-/***/ },
-/* 6 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<style>\n  .left, .right {\n    float: left;\n  }\n  .table {\n    position: relative;\n  }\n  .too-long-quote {\n    position: fixed;\n    top: 0;\n    left: 0;\n    font-size: 2.5vmax;\n    text-align: center;\n    color: rgba(255,255,255,0.3);\n    width: 100%;\n    height: 100%;\n    overflow: hidden;\n    /*background: #333;*/\n    padding-top: 4vmax;\n    -webkit-filter: blur(2px);\n  }\n  .text-centered {\n    text-align: center;\n  }\n  .onTop {\n    z-index: 20000;\n  }\n</style>\n\n<div class=\"grey-zone\">\n  <div class=\"too-long-quote\">\n    <strong>The failure</strong> of the postcolonial elites to <strong>create genuine democratic societies</strong> and foster a sense of national unity <strong>opting instead for military dictatorships</strong> that <strong>eroded the potential for economic and political development</strong> coupled with the historic mistakes of Arabic progressive parties and their <strong>appeasement towards autocratic rulers</strong> contributing to the <strong>complete evisceration of alternative political frameworks</strong> that could create organic resistance towards external meddling, hegemony and outright military interventions leaving a <strong>radical interpretation of religion as the only remaining ideological platform capable of mobilising the disenfranchised</strong> exacerbated by the global decline of universal ideals and the <strong>rise of identity as a prime mobiliser</strong> and enabled by political and <strong>financial support from theocratic regimes</strong> aiming to shore up their legitimacy and made worse by the <strong>collapse of the regional security</strong> order creating the conditions for <strong>proxy wars</strong> and political, social and economic upheaval intensified by geo-politically <strong>incoherent international meddling</strong> escalating conflicts and leading to a <strong>perpetual state of chaos</strong> under which the appeal of a revivalist religious-political order embodied by the <strong>caliphate becomes attractive</strong> particularly when coupled with a millenarian apocalyptic narrative.\n  </div>\n  <div class=\"table onTop \">\n    <div class=\"table-center\">\n      <div class=\"display-4 text-centered\">The situation may be complicated...</div>\n    </div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 7 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  #doyoufeelmuslim .anim-2 {\n    opacity: 0;\n  }\n  .video-background video {\n    width: 100vw;\n  }\n  .video-background {\n    position: fixed;\n    top: 0;\n    left: 0;\n  }\n  #doyoufeelmuslim .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n  }\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"0.17\" >\n    <source src=\"img/terrorist-attacks.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\">How do you feel about your Islam?</div><br /><br />\n    <div class=\"display-4 anim-2\">How do you feel about yourself?</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 8 */
-/***/ function(module, exports) {
-
-	module.exports = "<p class=\"explosion-byline\">Here's an example of 16 elements scaling, fading and moving at once.</p>\n<ul id=\"domExplosionList\">\n  <li class=\"dom-explosion-item dei-1\"></li>\n  <li class=\"dom-explosion-item dei-2\"></li>\n  <li class=\"dom-explosion-item dei-3\"></li>\n  <li class=\"dom-explosion-item dei-4\"></li>\n  <li class=\"dom-explosion-item dei-5\"></li>\n  <li class=\"dom-explosion-item dei-6\"></li>\n  <li class=\"dom-explosion-item dei-7\"></li>\n  <li class=\"dom-explosion-item dei-8\"></li>\n  <li class=\"dom-explosion-item dei-9\"></li>\n  <li class=\"dom-explosion-item dei-10\"></li>\n  <li class=\"dom-explosion-item dei-11\"></li>\n  <li class=\"dom-explosion-item dei-12\"></li>\n  <li class=\"dom-explosion-item dei-13\"></li>\n  <li class=\"dom-explosion-item dei-14\"></li>\n  <li class=\"dom-explosion-item dei-15\"></li>\n  <li class=\"dom-explosion-item dei-16\"></li>\n</ul>\n";
-
-/***/ },
-/* 9 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n.us-against-them {\n    opacity: 0;\n}\n</style>\n\n<div class=\"us-against-them\">\n\t<div class=\"table\">\n\t  <div class=\"table-center\">\n\t    <div class=\"display-4 text-centered\">Feels like it's us against them...</div>\n\t  </div>\n\t</div>\n</div>";
-
-/***/ },
-/* 10 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  .table input {\n    font-size: 6.5vw;\n    width: 5vw;\n    background: black;\n    border: none;\n    color: white;\n    font-weight: bold;\n  }\n  .left-align .quran-read {\n    text-align: left;\n  }\n  .calculator {\n    background: black;\n    width: 50vw;\n    margin: 0 auto;\n    padding: 2vw;\n    opacity: 0;\n  }\n  #isisafterlifefallacy .quote {\n    font-style: italic;\n  }\n  .equals {\n    width: 95%;\n    float: right;\n    border: 0.2vw solid\n  }\n  .text-right {\n    text-align: right;\n  }\n  .text-bold {\n    font-weight: 700;\n  }\n</style>\n\n<div class=\"table\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <div class=\"display-2 premise text-bold\">ISIS may kill innocent people indiscriminately...</div><br><br>\n    <div class=\"display-2 conclusion text-bold\">Have they even imagined how haram (sinful) that is?</div>\n    <div class=\"display-1 emphasis conclusion\">  <strong>...whoever kills a soul ... it is as if he had slain mankind entirely.</strong></div><span class=\"quote-source conclusion\"><a href=\"http://quran.com/5/32\">Qur'an 5:32</a></span>\n  </div>\n  <div class=\"table-center\" style=\"width:50\">\n    <div class=\"display-3 text-right calculator\">\n      If you've murdered <input type=\"number\" id=\"murdernumber\" value=\"1\" min=\"1\" size=\"2\" /></strong>\n      <br > * <span>7 billion people</span><br >\n      <hr class=\"equals\">\n      The weight of murdering <br> <strong><span id=\"murdertotal\"></span> people.</strong></div>\n  </div>\n</div>\n\n<!-- TODO: Move to a new script. -->\n\n<script>\n  $(function() {\n\n    var POPULATION_TOTAL = 7000000000;\n\n    // initialiaze\n    updateMurderCalculator();\n\n    $(\"#murdernumber\").on('change', function() {\n      updateMurderCalculator()\n    });\n\n    $(\"#murdernumber\").on('scroll', function() {\n      console.log('blur')\n      $(this).blur();\n    });\n\n    function updateMurderCalculator() {\n      var murdernumber = $(\"#murdernumber\").val();\n      var murderTotal  = murdernumber * POPULATION_TOTAL;\n      render(murderTotal);\n    }\n\n    function render(murderTotal) {\n      $('#murdertotal').html(murderTotal);\n    }\n\n  });\n</script>\n";
-
-/***/ },
-/* 11 */
-/***/ function(module, exports) {
-
-	module.exports = "  <div class=\"table\">\n    <div class=\"table-center\" style=\"width:50%\">\n      <h1 class=\"premise\">ISIS may believe the Apocalypse is near....</h1><br /><br />\n      <h1 class=\"conclusion\">Have they consulted the Qur’an on this matter?</h1>\n    </div>\n    <div class=\"table-center\" style=\"width:50\">\n      <h2 class=\"quran-read quran-hidden\">\n        They ask thee of the (destined) Hour, when will it come to port. Say: <strong>Knowledge thereof is with my Lord only. He alone will manifest it at its proper time...</strong><span class=\"quote-source\"><a href=\"http://quran.com/7/187\">Qur'an 7:187</a></span><br><br>\n         <strong>To Him [alone]</strong> is attributed  <strong>knowledge of the Hour.</strong><span class=\"quote-source\"><a href=\"http://quran.com/41/47\">Quran 41:47</a></span>\n      </h2>\n    </div>\n  </div>\n";
-
-/***/ },
-/* 12 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  .left {\n    width: 40vw;\n  }\n\n  .newssource-hor,\n  greyzone-src {\n    max-height: 40vh;\n    box-shadow: 0 1vw 2vw rgba(0, 0, 0, 0.6);\n  }\n\n  #isisbankrupt .newsources {\n    position: absolute;\n    top: 35vh;\n    width: 230vw;\n    height: 50vh;\n    /*overflow: hidden;*/\n    transform: translateX(250%);\n  }\n\n  .hide-later {\n    opacity: 1;\n  }\n\n  #isisbankrupt .newsources img {\n    display: inline;\n    margin: 3vw;\n  }\n\n  #isisbankrupt .newsource-hor {\n    display: inline;\n    opacity: 1;\n  }\n\n  #isisbankrupt .conclusion {\n    opacity: 0;\n  }\n\n  #isisbankrupt .text-content {\n    margin: 3vw;\n  }\n\n  .black-zone {\n    background: black;\n    width: 100vw;\n    height: 100vh;\n  }\n\n</style>\n<div class=\"grey-zone table\">\n  <div class=\"black-zone\">\n    <div class=\"display-4  text-content\">\n      ISIS is bankrupt as an ideology…\n      <br>\n      <br>\n      <span class=\"conclusion\">but they are cunning with strategy.</span>\n    </div>\n    <div class=\"newsources\">\n      <a href=\"http://www.nytimes.com/2015/06/13/world/middleeast/isis-is-winning-message-war-us-concludes.html?_r=0\"><img class=\"newssource-hor\" src=\"./img/isis-strategy-social.png\"></a>\n      <a href=\"http://money.cnn.com/2015/12/06/news/isis-funding/\"><img class=\"newssource-hor\" src=\"./img/isis-strategy-billions.png\"></a>\n      <a href=\"http://money.cnn.com/2015/12/06/news/isis-funding/\"><img class=\"newssource-hor\" src=\"./img/isis-strategy-flow.png\"></a>\n      <a href=\"http://www.washingtontimes.com/news/2016/jan/27/islamic-states-cyber-arm-seeks-revenge-hackers-dea/\"><img class=\"newssource-hor\" src=\"./img/isis-strategy-hackers.png\"></a>\n      <a href=\"http://www.theatlantic.com/international/archive/2015/10/war-isis-us-coalition/410044/\"><img class=\"newssource-hor\" src=\"./img/isis-strategy-humanity.png\"></a>\n      <a href=\"https://www.opendemocracy.net/nafeez-ahmed/isis-wants-destroy-greyzone-how-we-defend\"><img class=\"newssource-hor greyzone-src\" src=\"./img/isis-strategy-greyzone.png\"></a>\n    </div>\n  </div>\n</div>\n</div>\n";
-
-/***/ },
-/* 13 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  #isisfightmisquote .premise,\n  #isisfightmisquote .conclusion\n   {\n     position: absolute;\n     width: 40vw;\n     bottom: 40vh;\n     opacity: 0;\n   }\n\n</style>\n<div class=\"table\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <h1 class=\"premise\">ISIS may quote the Qur'an...</h1>\n    <h1 class=\"conclusion\">But does ISIS read the Qur'an?</h1>\n  </div>\n  <div class=\"table-center\" style=\"width:50\">\n    <h2 class=\"quran-read\">\n      <span class=\"quran-hidden\">Fight in the cause of Allah <strong>against those who fight you</strong>, and <strong>do not commit aggression.</strong> <span class=\"quote-source\"><a href=\"http://quran.com/2/190\">Quran 2:190</a></span><br><br></span>\n      Kill them, wherever you may find them! <span class=\"quote-source\"><a href=\"http://quran.com/2/191\">Qur'an 2:191</a></span><br><br>\n      <span class=\"quran-hidden\">...if they cease, <strong>let there be no hostility except against oppressors</strong>. <span class=\"quote-source\"><a href=\"http://quran.com/2/193\">Quran 2:193</a></span></span>\n    </h2>\n  </div>\n</div>\n";
-
-/***/ },
-/* 14 */
-/***/ function(module, exports) {
-
-	module.exports = "They has a simple objective they’ve stated.\n";
-
-/***/ },
-/* 15 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  #isiswantstodivide .anim-2 {\n    opacity: 0;\n  }\n\n  #isiswantstodivide .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n  }\n  .color-zone {\n    position: absolute;\n    width: 100vw;\n    height: 100vh;\n  }\n  .zones {\n    height: 100vh;\n  }\n  .violent-zones {\n    width: 10vw;\n    position: relative;\n    z-index: 2;\n  }\n  .grey-zone {\n    background: #747B81\n  }\n  .white-zone {\n    background: white;\n    float:left;\n  }\n  .black-zone {\n    background: black;\n    float:right;\n  }\n  #isiswantstodivide .display-4{\n    position: relative;\n    z-index: 3;\n  }\n</style>\n<div class=\"color-zone\">\n  <div class=\"zones black-zone violent-zones\"></div>\n  <div class=\"zones white-zone violent-zones\"></div>\n</div>\n<div class=\"table grey-zone\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-2\">They want to divide us all</div><br />\n    <div class=\"display-4 anim-2\">And start another great war.</div><br /><br />\n    <div class=\"display-4 anim-1\">We won't let that happen.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 16 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  .left {\n    width: 40vw;\n  }\n  .newssource {\n    max-height: 40vh;\n    display: block;\n    box-shadow: 0 1vw 2vw rgba(0,0,0,0.6);\n    margin-bottom: 5vh;\n  }\n  .newsources {\n    position: absolute;\n    top: 5vh;\n    right: 5vh;\n    width: 45vw;\n    height: 80vh;\n    /*overflow: hidden;*/\n    transform: translateY(80%);\n  }\n  .newsources img {\n    max-width: 40vw;\n  }\n  #itisnteasy .display-4 {\n    opacity: 0;\n  }\n</style>\n<div class=\"table\">\n  <div class=\"table-center\">\n  <div class=\"display-4 left\">It isn’t easy being Muslim anywhere… </div>\n  <div class=\"newsources\">\n    <a target=\"_blank\" href=\"http://content.time.com/time/covers/0,16641,20100830,00.html\"><img class=\"newssource\" src=\"./img/hatecrime-america.jpg\" ></a>\n    <a target=\"_blank\" href=\"http://america.aljazeera.com/articles/2015/12/9/us-muslims-experience-surge-in-islamophobic-attacks.html\"><img class=\"newssource\" src=\"./img/hatecrime-america2.png\" ></a>\n    <a target=\"_blank\" href=\"http://www.inquisitr.com/2610717/hate-crime-string-of-anti-muslim-attacks-hit-canada.html\"><img class=\"newssource\" src=\"./img/hatecrime-canada.png\" ></a>\n    <a target=\"_blank\" href=\"http://america.aljazeera.com/articles/2015/2/17/threats-to-muslim-american-community-intensifies-after-chapel-hill-shooting.html\"><img class=\"newssource\" src=\"./img/hatecrime-chapelhill.png\" ></a>\n    <a target=\"_blank\" href=\"http://www.telegraph.co.uk/news/worldnews/europe/france/12075018/Hate-crimes-against-Muslims-and-Jews-soar-in-France.html\"><img class=\"newssource\" src=\"./img/hatecrime-france.png\" ></a>\n    <a target=\"_blank\" href=\"https://www.washingtonpost.com/world/europe/religious-liberties-under-strain-for-muslims-in-france/2015/11/22/83054c06-912f-11e5-befa-99ceebcbb272_story.html\"><img class=\"newssource\" src=\"./img/hatecrime-france2.png\" ></a>\n    <a target=\"_blank\" href=\"http://losangeles.cbslocal.com/2015/12/13/2-mosques-in-hawthorne-vandalized-with-graffiti/\"><img class=\"newssource\" src=\"./img/hatecrime-grenadegraffiti.png\" ></a>\n    <a target=\"_blank\" href=\"http://ktla.com/2015/12/11/possible-hate-crime-investigated-after-man-pulls-out-knife-on-muslim-woman-in-chino-hills-sheriffs-department/\"><img class=\"newssource\" src=\"./img/hatecrime-knife.png\" ></a>\n    <a target=\"_blank\" href=\"http://www.cnn.com/2015/12/12/us/california-mosque-fire/\"><img class=\"newssource\" src=\"./img/hatecrime-mosquefire.png\" ></a>\n    <a target=\"_blank\" href=\"http://www.foxnews.com/transcript/2014/10/07/bill-oreilly-islam-destructive-force-world/\"><img class=\"newssource\" src=\"./img/hatecrime-oreilly.png\" ></a>\n    <a target=\"_blank\" href=\"http://www.nydailynews.com/news/national/muslim-ga-girl-class-gasped-teacher-bomb-joke-article-1.2463495\"><img class=\"newssource hidesource\" src=\"./img/hatecrime-studentbackpack.png\" ></a>\n    <a target=\"_blank\" href=\"http://time.com/4139476/donald-trump-shutdown-muslim-immigration/\"><img class=\"newssource hidesource\" src=\"./img/hatecrime-trump.png\" ></a>\n    <a target=\"_blank\" href=\"https://today.yougov.com/news/2015/12/11/two-thirds-republicans-back-trump-proposal/\"><img class=\"newssource trump\" src=\"./img/hatecrime-poll.png\" ></a>\n  </div>\n</div>\n</div>\n";
-
-/***/ },
-/* 17 */
-/***/ function(module, exports) {
-
-	module.exports = "\n\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-3 text-centered\">While we may not agree on everything,</div>\n    <div class=\"display-3 text-centered\">we can agree on one thing:</div>\n    <div class=\"display-4 text-bold text-centered\">ISIS is <span style=\"color:#AB2E2E\">murdering</span> Islam's name</div>\n  </div>\n</div>\n\n\n<!--\nView of ISIS Overwhelmingly Negative (Pew bar graph)\nhttp://www.pewresearch.org/fact-tank/2015/11/17/in-nations-with-significant-muslim-populations-much-disdain-for-isis/ft_15-11-17_isis_views/\n -->\n";
-
-/***/ },
-/* 18 */
-/***/ function(module, exports) {
-
-	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">AND THAT’S GOT TO END.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 19 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n.first,.second, .third, .fourth {\n\topacity: 0\n}\n#likepeace .display-4 {\n\topacity: 1!important;\n\ttransform: translateY(30%);\n}\n\n\n#likepeace input {\n\tfont-size: 3vmin;\n\tbackground: #747B81;\n\tcolor: white;\n\tpadding: 2%;\n\twidth: auto;\n\tmargin: 0.5vmin 0;\n\twidth: 96%;\n}\n\n#likepeace label {\n\tcolor: #747B81;\n}\n\n#likepeace input[type=submit] {\n\tcolor: white;\n\tbackground: #3CA2CD;\n\twidth: auto;\n\tmargin-top: 2vmin;\n\tcursor: pointer;\n}\n\n#likepeace label {\n\tdisplay: block;\n\tmargin: 0.2vmin 0.5vmin;\n\ttext-transform: uppercase;\n\tfont-weight: bold;\n\tfont-size: 2.5vmin;\n}\n\n#likepeace #mc_embed_signup {\n\twidth: 50vw;\n\tbackground: white;\n\tmargin: 0 auto;\n\tpadding: 2vmin;\n}\n\n#likepeace h2 {\n\tcolor: black;\n\tmargin-bottom: 2vmin\n}\n</style>\n<div class=\"table grey-zone\">\n\t\t<div class=\"table-center\">\n  \t\t<div class=\"display-4 text-centered\"><span class=\"first\">MUSLIMS</span> <span class=\"second\">AGAINST</span> <span class=\"third\">ISIS</span></div>\n\t\t\t<div class=\"fourth\">\n\n\t\t\t\t<!-- Begin MailChimp Signup Form -->\n\t\t\t\t<div id=\"mc_embed_signup\">\n\t\t\t\t<form action=\"//muslimsagainstisis.us12.list-manage.com/subscribe/post?u=9d2dd81ccb07b710593475421&amp;id=81a5f5250c\" method=\"post\" id=\"mc-embedded-subscribe-form\" name=\"mc-embedded-subscribe-form\" class=\"validate\" target=\"_blank\" novalidate>\n\t\t\t\t    <div id=\"mc_embed_signup_scroll\">\n\t\t\t\t\t<h2>Updates Soon. Subscribe Now.</h2>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-EMAIL\">Email Address </label>\n\t\t\t\t\t<input type=\"email\" value=\"\" name=\"EMAIL\" class=\"required email\" id=\"mce-EMAIL\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-FNAME\">First Name </label>\n\t\t\t\t\t<input type=\"text\" value=\"\" name=\"FNAME\" class=\"required\" id=\"mce-FNAME\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-LNAME\">Last Name </label>\n\t\t\t\t\t<input type=\"text\" value=\"\" name=\"LNAME\" class=\"required\" id=\"mce-LNAME\">\n\t\t\t\t</div>\n\t\t\t\t\t<div id=\"mce-responses\" class=\"clear\">\n\t\t\t\t\t\t<div class=\"response\" id=\"mce-error-response\" style=\"display:none\"></div>\n\t\t\t\t\t\t<div class=\"response\" id=\"mce-success-response\" style=\"display:none\"></div>\n\t\t\t\t\t</div>    <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->\n\t\t\t\t    <div style=\"position: absolute; left: -5000px;\" aria-hidden=\"true\"><input type=\"text\" name=\"b_9d2dd81ccb07b710593475421_81a5f5250c\" tabindex=\"-1\" value=\"\"></div>\n\t\t\t\t    <div class=\"clear\"><input type=\"submit\" value=\"Subscribe\" name=\"subscribe\" id=\"mc-embedded-subscribe\" class=\"button\"></div>\n\t\t\t\t    </div>\n\t\t\t\t</form>\n\t\t\t\t</div>\n\n\t\t\t\t<!--End mc_embed_signup-->\n\n\t\t\t</div>\n\t\t</div>\n</div>\n";
-
-/***/ },
-/* 20 */
-/***/ function(module, exports) {
-
-	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">And we may be having mixed feelings about the situation.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 21 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"muslims-believe-individual-life grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We are Muslims. Muslims that believe EVERY individual life is sacred.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
-
-/***/ },
-/* 22 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n.out-to-get-you {\n    opacity: 0;\n}\n</style>\n\n<div class=\"out-to-get-you\">\n\t<div class=\"table \">\n\t  <div class=\"table-center\">\n\t    <div class=\"display-4 text-centered\">...like everybody's out to get you...</div>\n\t  </div>\n\t</div>\n</div>";
-
-/***/ },
-/* 23 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  #reactionstoterror .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n    /*position: absolute;*/\n    /*bottom: 5vh;*/\n\n  }\n  #reactionstoterror .anim-1 {\n    opacity: 0;\n  }\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"0.4\">\n    <source src=\"img/RevisedWork2.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n    <div class=\"table-center\">\n      <div class=\"display-4 anim-1\">How do you feel about how people react to the attacks?</div><br /><br />\n    </div>\n</div>\n";
-
-/***/ },
-/* 24 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n.something-to-prove {\n    opacity: 0;\n}\n</style>\n<div class=\"something-to-prove\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">...like you have <strong>something to prove</strong>.</div>\n  \t\t</div>\n\t</div>\n</div>";
-
-/***/ },
-/* 25 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"we-are-coming grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We are coming.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
-
-/***/ },
-/* 26 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"we-are-not-afraid grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We will do more. We will stop this false ideology. We are not afraid.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
-
-/***/ },
-/* 27 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n.wewillprotecteachother {\n    opacity: 0;\n}\n#wewillprotecteachother img {\n  max-width: 35vw;\n}\n#wewillprotecteachother .conclusion,\n#wewillprotecteachother .premise {\n  opacity: 0;\n}\n</style>\n<div class=\"table grey-zone\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <div class=\"premise\">\n      <div class=\"display-2\">We will protect every individual life.</div>\n      <a href=\"http://learningenglish.voanews.com/content/kenyan-muslims-protect-christians-from-terrorist-attack/3114326.html\"><img src=\"./img/KenyaProtect2.png\"></a>\n    </div>\n  </div>\n  <div class=\"table-center\" style=\"width:45%\">\n    <h2 class=\"conclusion\">\n      <div class=\"display-2\">We will ask others to help protect ours.</div>\n      <a href=\"http://www.usatoday.com/story/news/nation-now/2015/12/22/iwillprotectyou-us-service-members-soothe-scared-muslim-girl/77748874/\"><img src=\"./img/IWillProtectYou.png\"></a>\n    </h2>\n  </div>\n</div>\n";
-
-/***/ },
-/* 28 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n  #doyoufeelmuslim .anim-2 {\n    opacity: 0;\n  }\n  .video-background video {\n    width: 100vw;\n  }\n  .video-background {\n    position: fixed;\n    top: 0;\n    left: 0;\n  }\n  #whatislamichistoryprefers .display-4 a,\n  .islamic-inventions {\n    color: rgba(255,255,255,1);\n  }\n\n  .islamic-inventions {\n    opacity: 0;\n  }\n\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"1\">\n    <source src=\"img/tyson.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\"><a href=\"https://www.youtube.com/watch?v=WZCuF733p88\">Has ISIS forgotten the best of what Muslims have done??</a></div>\n    <div class=\"display-3 islamic-inventions\">\n      <div>Algebra</div>\n      <div>Surgical Innovations</div>\n      <div>Modern Hospitals</div>\n      <div>Accredited Universities</div>\n      <div>The Guitar</div>\n    </div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 29 */
-/***/ function(module, exports) {
-
-	module.exports = "\n              <!-- the Qur’an prefers learning (‘ilm) over murder.\n              Last time we checked, the Qur’an values scientific observation, experimental knowledge and rationality, over blind leadership following, as seen in 750 VERSES (10%) of the Qur’an. -->\n\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\">Last time we checked,</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers forgiveness over punishment.</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers peace over over war.</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers knowledge over blindness.</div><br /><br />\n  </div>\n</div>\n";
-
-/***/ },
-/* 30 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">Who are they to declare who is Muslim and who is not? What is Islam and what is not?</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 31 */
-/***/ function(module, exports) {
-
-	module.exports = "\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4\">With all the hatred on the news.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var map = {
-		"./battleofageneration/scene.json": 33,
-		"./complicatedsituation/scene.json": 34,
-		"./differentpractices/scene.json": 66,
-		"./doyoufeelmuslim/scene.json": 35,
-		"./explosion/scene.json": 36,
-		"./feelingconfused/scene.json": 37,
-		"./intro/scene.json": 63,
-		"./isisafterlifefallacy/scene.json": 38,
-		"./isisapocalypsemisquote/scene.json": 39,
-		"./isisbankrupt/scene.json": 40,
-		"./isisfightmisquote/scene.json": 41,
-		"./isisobjective/scene.json": 42,
-		"./isiswantstodivide/scene.json": 43,
-		"./itisnteasy/scene.json": 44,
-		"./itsgottoend/scene.json": 45,
-		"./iwantmyislamback1/scene.json": 46,
-		"./likepeace/scene.json": 47,
-		"./mixedfeelings/scene.json": 48,
-		"./muslimsbelieveindividuallife/scene.json": 49,
-		"./outtogetyou/scene.json": 50,
-		"./reactionstoterror/scene.json": 51,
-		"./somethingtoprove/scene.json": 52,
-		"./wearecoming/scene.json": 53,
-		"./wearenotafraid/scene.json": 54,
-		"./wewillprotecteachother/scene.json": 55,
-		"./whatislamichistoryprefers/scene.json": 56,
-		"./whatthequranprefers/scene.json": 57,
-		"./whoarethey/scene.json": 58,
-		"./withallthehatred/scene.json": 59,
-		"./yetthatsokay/scene.json": 69
-	};
-	function webpackContext(req) {
-		return __webpack_require__(webpackContextResolve(req));
-	};
-	function webpackContextResolve(req) {
-		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
-	};
-	webpackContext.keys = function webpackContextKeys() {
-		return Object.keys(map);
-	};
-	webpackContext.resolve = webpackContextResolve;
-	module.exports = webpackContext;
-	webpackContext.id = 32;
-
-
-/***/ },
-/* 33 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#battleofageneration",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#battleofageneration",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#battleofageneration",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 34 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#complicatedsituation",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#complicatedsituation",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#complicatedsituation",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".too-long-quote",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 35 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#doyoufeelmuslim",
-			"duration": "50%",
-			"animations": [
-				{
-					"selector": ".anim-1",
-					"opacity": 1
-				}
-			]
-		},
-		{
-			"wrapper": "#doyoufeelmuslim",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#doyoufeelmuslim",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".anim-2",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#doyoufeelmuslim",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#doyoufeelmuslim",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".anim-1",
-					"opacity": [
-						1,
-						0
-					],
-					"translateY": [
-						"0%",
-						"-20%"
-					]
-				},
-				{
-					"selector": ".anim-2",
-					"opacity": [
-						1,
-						0
-					],
-					"translateY": [
-						"0%",
-						"-20%"
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 36 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#explosion",
-			"duration": "150%",
-			"animations": [
-				{
-					"selector": ".explosion-byline",
-					"translateY": "-25%",
-					"opacity": [
-						0,
-						1.75
-					]
-				},
-				{
-					"selector": "#domExplosionList",
-					"translateY": "-70%",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#explosion",
-			"duration": "150%",
-			"animations": [
-				{
-					"selector": ".dei-1",
-					"translateY": "-15%",
-					"translateX": "-10%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 2
-				},
-				{
-					"selector": ".dei-2",
-					"translateY": "-5%",
-					"translateX": "-4%",
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".dei-3",
-					"translateY": "-9%",
-					"translateX": "2%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.2
-				},
-				{
-					"selector": ".dei-4",
-					"translateY": "-17%",
-					"translateX": "8%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.5
-				},
-				{
-					"selector": ".dei-5",
-					"translateY": "-2%",
-					"translateX": "-15%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 2
-				},
-				{
-					"selector": ".dei-6",
-					"translateY": "-1%",
-					"translateX": "-7%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.2
-				},
-				{
-					"selector": ".dei-7",
-					"translateY": "-4%",
-					"translateX": "2%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.1
-				},
-				{
-					"selector": ".dei-8",
-					"translateY": "-3%",
-					"translateX": "12%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.8
-				},
-				{
-					"selector": ".dei-9",
-					"translateY": "3%",
-					"translateX": "-12%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.5
-				},
-				{
-					"selector": ".dei-10",
-					"translateY": "5%",
-					"translateX": "-4%",
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".dei-11",
-					"translateY": "8%",
-					"translateX": "6%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.4
-				},
-				{
-					"selector": ".dei-12",
-					"translateY": "1%",
-					"translateX": "20%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.9
-				},
-				{
-					"selector": ".dei-13",
-					"translateY": "8%",
-					"translateX": "-12%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.8
-				},
-				{
-					"selector": ".dei-14",
-					"translateY": "4%",
-					"translateX": "-3%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.3
-				},
-				{
-					"selector": ".dei-15",
-					"translateY": "14%",
-					"translateX": "5%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 1.7
-				},
-				{
-					"selector": ".dei-16",
-					"translateY": "6%",
-					"translateX": "9%",
-					"opacity": [
-						1,
-						0
-					],
-					"scale": 2
-				}
-			]
-		},
-		{
-			"wrapper": "#explosion",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".explosion-byline",
-					"translateY": [
-						"-25%",
-						"-40%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 37 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#feelingconfused",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".us-against-them",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#feelingconfused",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#feelingconfused",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".us-against-them",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 38 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": "0",
-					"opacity": [
-						0,
-						1.75
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateX": "-25%",
-					"opacity": [
-						0,
-						0
-					]
-				},
-				{
-					"selector": ".calculator",
-					"translateX": "65%",
-					"opacity": [
-						0,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": "0%",
-					"opacity": [
-						0,
-						0
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "150%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateX": [
-						"-25%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".calculator",
-					"translateX": [
-						"65%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0",
-						"0"
-					],
-					"opacity": [
-						1
-					]
-				},
-				{
-					"selector": ".quran-hidden",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "150%",
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisafterlifefallacy",
-			"duration": "250%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".calculator",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0%",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".premise",
-					"translateY": [
-						"0%",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 39 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": "0",
-					"opacity": [
-						0,
-						1.75
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateY": "25%",
-					"opacity": [
-						0,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": "0%",
-					"opacity": [
-						0,
-						0
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "150%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"25%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0",
-						"0"
-					],
-					"opacity": [
-						1
-					]
-				},
-				{
-					"selector": ".quran-hidden",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "150%",
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisapocalypsemisquote",
-			"duration": "250%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0%",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".premise",
-					"translateY": [
-						"0%",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 40 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".newsources",
-					"translateX": [
-						"300%"
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "380%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".newsources",
-					"translateX": [
-						"300%",
-						"-20%"
-					],
-					"opacity": [
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".greyzone-src",
-					"scale": [
-						1,
-						2
-					],
-					"translateY": [
-						0,
-						"-20%"
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".newssource-hor",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisbankrupt",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".black-zone",
-					"translateX": [
-						0,
-						"90%"
-					]
-				},
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 41 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": "0",
-					"opacity": [
-						0,
-						1.75
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateY": "25%",
-					"opacity": [
-						0,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": "0%",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "150%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"25%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0",
-						"0"
-					],
-					"opacity": [
-						1
-					]
-				},
-				{
-					"selector": ".quran-hidden",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "150%",
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isisfightmisquote",
-			"duration": "250%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".quran-read",
-					"translateY": [
-						"0%",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 42 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isisobjective",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 43 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#isiswantstodivide",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".violent-zones",
-					"scale": [
-						1,
-						5.55
-					]
-				},
-				{
-					"selector": ".anim-2",
-					"opacity": [
-						0,
-						1.55
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isiswantstodivide",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isiswantstodivide",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".violent-zones",
-					"scale": [
-						5.55,
-						0
-					]
-				},
-				{
-					"selector": ".anim-1",
-					"opacity": [
-						0,
-						1.55
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#isiswantstodivide",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#isiswantstodivide",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".anim-1",
-					"opacity": [
-						1,
-						0
-					],
-					"translateY": [
-						"0%",
-						"-20%"
-					]
-				},
-				{
-					"selector": ".anim-2",
-					"opacity": [
-						1,
-						0
-					],
-					"translateY": [
-						"0%",
-						"-20%"
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 44 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				},
-				{
-					"selector": ".newsources",
-					"translateY": [
-						"80%"
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "500%",
-			"animations": [
-				{
-					"selector": ".newsources",
-					"translateY": [
-						"80%",
-						"-450%"
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "80%",
-			"animations": [
-				{
-					"selector": ".hidesource",
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".trump",
-					"translateX": [
-						0,
-						"-20%"
-					],
-					"translateY": [
-						0,
-						"10%"
-					],
-					"scale": [
-						1,
-						2
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#itisnteasy",
-			"duration": "300%",
-			"animations": [
-				{
-					"selector": ".trump",
-					"translateX": [
-						"-20%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 45 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#itsgottoend",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#itsgottoend",
-			"duration": "1%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#itsgottoend",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						1
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 46 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#iwantmyislamback1",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						2
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#iwantmyislamback1",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#iwantmyislamback1",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 47 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"translateY": "30%"
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".first",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".second",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".third",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "50%",
-			"animations": []
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".first",
-					"opacity": 1
-				},
-				{
-					"selector": ".second",
-					"opacity": 1
-				},
-				{
-					"selector": ".third",
-					"opacity": 1
-				},
-				{
-					"selector": ".fourth",
-					"opacity": [
-						-4,
-						1
-					]
-				},
-				{
-					"selector": ".display-4",
-					"translateY": [
-						"30%",
-						"0%"
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "200%",
-			"animations": [
-				{
-					"selector": ".first",
-					"opacity": 1
-				},
-				{
-					"selector": ".second",
-					"opacity": 1
-				},
-				{
-					"selector": ".third",
-					"opacity": 1
-				},
-				{
-					"selector": ".fourth",
-					"opacity": 1
-				},
-				{
-					"selector": ".display-4",
-					"translateY": "0%"
-				}
-			]
-		},
-		{
-			"wrapper": "#likepeace",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		}
-	];
-
-/***/ },
-/* 48 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#mixedfeelings",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1.25
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#mixedfeelings",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#mixedfeelings",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 49 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#muslimsbelieveindividuallife",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#muslimsbelieveindividuallife",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#muslimsbelieveindividuallife",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 50 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#outtogetyou",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".out-to-get-you",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#outtogetyou",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#outtogetyou",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".out-to-get-you",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 51 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#reactionstoterror",
-			"duration": "150%",
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#reactionstoterror",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".anim-1",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#reactionstoterror",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#reactionstoterror",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".anim-1",
-					"opacity": [
-						1,
-						0
-					],
-					"translateY": [
-						"0%",
-						"-20%"
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 52 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#somethingtoprove",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".something-to-prove",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#somethingtoprove",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#somethingtoprove",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".something-to-prove",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 53 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#wearecoming",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#wearecoming",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#wearecoming",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 54 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#wearenotafraid",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#wearenotafraid",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#wearenotafraid",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 55 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#wewillprotecteachother",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": [
-						"25%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1.75
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateY": "25%",
-					"opacity": [
-						0,
-						0
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#wewillprotecteachother",
-			"duration": "50%",
-			"animations": []
-		},
-		{
-			"wrapper": "#wewillprotecteachother",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"25%",
-						"0"
-					],
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#wewillprotecteachother",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#wewillprotecteachother",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".premise",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				},
-				{
-					"selector": ".conclusion",
-					"translateY": [
-						"0",
-						"-25%"
-					],
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 56 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#whatislamichistoryprefers",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#whatislamichistoryprefers",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						1
-					]
-				},
-				{
-					"selector": ".islamic-inventions",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#whatislamichistoryprefers",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#whatislamichistoryprefers",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0.5
-					]
-				},
-				{
-					"selector": ".islamic-inventions",
-					"opacity": [
-						1,
-						0.5
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#whatislamichistoryprefers",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0.5,
-						0
-					]
-				},
-				{
-					"selector": ".islamic-inventions",
-					"opacity": [
-						0.5,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 57 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#whatthequranprefers",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 58 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#whoarethey",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#whoarethey",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#whoarethey",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 59 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#withallthehatred",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 60 */,
-/* 61 */,
-/* 62 */
-/***/ function(module, exports) {
-
-	module.exports = "<style>\n/*#intro {\n  position: fixed;\n  top: 15vh;\n  left: 10%;\n  width: 80%;\n  color: #fff;\n  text-align: center;\n  text-transform: uppercase;\n}*/\n</style>\n<div class=\"intro\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-1 text-centered\">For the best user experience, please plug in headphones.<br></br>\n    \t\tThis is an interactive experience. All sources and quotes are real links.<br></br>\n    \t\tScroll or press the 'down' key to begin.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
-
-/***/ },
-/* 63 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#intro",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{
-					"selector": ".display-1",
-					"opacity": [
-						1,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 64 */
-/***/ function(module, exports) {
-
-	
-	var $videoIndicator = $('#video-progress .progress');
-	var videoPlaying;
-	var $el;
-
-	$videoIndicator.hide();
-	module.exports.start = function($newVideo) {
-	  $el = $newVideo[0];
-	  $videoIndicator.show();
-	  videoPlaying = true;
-	  loop();
-	};
-
-	module.exports.stop = function() {
-	  videoPlaying = false;
-	  $('#video-progress .progress').hide();
-	};
-
-	function loop() {
-	  window.requestAnimationFrame(function() {
-	    var rate = ($el.currentTime / $el.duration);
-	    var percent = rate * 100;
-	    $videoIndicator.css({'width': percent + 'vw'});
-	    if(videoPlaying) {loop()}
-	  })
-	}
-
-
-/***/ },
-/* 65 */
-/***/ function(module, exports) {
-
-	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">No one has the complete answer, and we all have different ways of practicing Islam.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 66 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#differentpractices",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1.25
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#differentpractices",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#differentpractices",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 67 */
-/***/ function(module, exports, __webpack_require__) {
-
-	// https://github.com/IanLunn/scrollIntent/blob/master/js/scrollIntent-min.js
-	var ScrollIntent=function(){"use strict";function a(a,b){for(var c in b)a[c]=b[c];return a}function b(a){var b={32:"space",38:"up",40:"down"},c=b[a];return void 0===c&&(c=!1),c}function c(a){a()}function d(a){switch(typeof a){case"number":return a;case"string":return parseFloat(a)/100}}function e(a){var b;return b=a===window?window.innerHeight||document.documentElement.clientHeight:a.clientHeight}function f(a,b,c,f,g){var h;switch(h=void 0!==g?g:a,void 0!==c&&(a=c),typeof b){case"number":var i=b;break;case"string":var j=d(b),i=e(a)*j}if(void 0!==f)switch(typeof f){case"number":i+=f;break;case"string":var k=d(f);i+=e(h)*k}return i}function g(a,b,c){var d;if(b){if(b.indexOf)return b.indexOf.call(b,a,c);for(d=b.length,c=c?0>c?Math.max(0,d+c):c:0;d>c;c++)if(c in b&&b[c]===a)return c}return-1}function h(a,b,c){return a.addEventListener?(a.addEventListener(b,c,!1),!0):a.attachEvent?a.attachEvent("on"+b,c):(b="on"+b,"function"==typeof a[b]&&(c=function(a,b){return function(){a.apply(this,arguments),b.apply(this,arguments)}}(a[b],c)),a[b]=c,!0)}function i(){var a,b;switch(typeof l.scrollYOffset){case"number":a=l.scrollYOffset;break;case"string":b=d(k.settings.scrollYOffset),a=e(k.element)*b}return a}function j(a,b){var c,d;return a===window?(d=document.body.scrollTop||document.documentElement.scrollTop||window.pageYOffset,c=d+b):c=a.scrollTop+b,isNaN(c)===!0&&(c=0),c}var k,l={namespace:"scrollIntent",scrollYOffset:0,scrollThreshold:250,callbacksPerActions:void 0,resetCallbacksPerActionOnDirectionChange:!0,resetDurationOnDirectionChange:!1,developerIndicators:!1},m=void 0,n=void 0,o=[];return ScrollIntent=function(b,c,d){k=this,k.element=b,k.actions=c,k.initComplete=function(){},k.scrolling=function(){},k.scrollingStopped=function(){},c instanceof Array||(k.actions=[c]),k.settings=a(l,d),k.numberOfActions=void 0===k.actions.length?1:k.actions.length,k.scrollY=void 0,k.scrollYPrev=void 0,k.isScrolling=!1,k.direction=void 0,k.scrollYStart=0,k.scrollAmount=0,k.keyPressesPerEvent=0,k.init()},ScrollIntent.prototype.init=function(){var a=this;return a.computedScrollYOffset=i(),a.scrollY=j(a.element,a.computedScrollYOffset),a.setUpActions(),a.setupDeveloperIndicators(!0,!0),a.element.onscroll=function(){a.scrollY=j(a.element,a.computedScrollYOffset),a.isScrolling===!1&&(a.isScrolling=!0,a.scrollYStart=a.scrollYPrev,a.startTime=+new Date,void 0===a.scrollMethod&&(a.scrollMethod="scrollbar"),a.scrollCheckTimer=setInterval(function(){a.scrollY===a.scrollYPrev?a.stopScrollCheck():a.whenScrolling(),a.scrollYPrev=a.scrollY},a.settings.scrollThreshold))},h(a.element,"mousewheel",function(){a.scrollMethod="mousewheel"}),h(a.element,"DOMMouseScroll",function(){a.scrollMethod="mousewheel"}),h(window,"onmousewheel",function(){a.scrollMethod="mousewheel"}),h(a.element,"mousedown",function(){a.mousedown=!0}),h(a.element,"mouseup",function(){a.mousedown=!1}),h(a.element,"keydown",function(c){c=c||window.event;var d=c.charCode||c.keyCode;a.scrollMethod=b(d),a.keyPressesPerEvent++}),window.onresize=function(){this.resizeTO&&clearTimeout(this.resizeTO),this.resizeTO=setTimeout(function(){c(function(){for(var b=0;b<a.numberOfActions;b++){var c=a.actions[b];c.computedWaypoint=f(a.element,c.waypoint,c.waypointRelativeTo,c.waypointOffset,c.waypointOffsetRelativeTo)}a.computedScrollYOffset=i(),a.setupDeveloperIndicators(!0,!0)})},200)},a.initComplete(a),!1},ScrollIntent.prototype.destroy=function(){return!1},ScrollIntent.prototype.checkConditions=function(){for(var a=this,b=0;b<a.numberOfActions;b++){var c=a.actions[b];c.computedWaypoint!==c.previousComputedWaypoint&&(c.noOfWaypointsTriggered=0),a.nowTime=+new Date,a.currentScrollDuration=a.nowTime-a.startTime,void 0!==c.computedWaypoint&&(a.scrollY>c.computedWaypoint?(c.waypointPassed=c.afterWaypoint===!1?!0:!1,c.afterWaypoint=!0):(c.waypointPassed=c.afterWaypoint===!0?!0:!1,c.afterWaypoint=!1)),void 0!==c.direction&&a.direction!==c.direction||void 0!==c.callbacksPerAction&&c.noOfCallbacksTriggered>c.callbacksPerAction||void 0!==c.minSpeed&&a.scrollAmount<=c.minSpeed||void 0!==c.maxSpeed&&a.scrollAmount>c.maxSpeed||void 0!==c.computedWaypoint&&(c.waypointPassed===!1||0===a.scrollAmount&&"scrollbar"===a.scrollMethod)||void 0!==c.minWaypoint&&a.scrollY<c.minWaypoint||void 0!==c.maxWaypoint&&a.scrollY>c.maxWaypoint||void 0!==c.scrollMethod&&-1===g(a.scrollMethod,c.scrollMethod)||void 0!==c.keyPressesPerEvent&&a.keyPressesPerEvent!==c.keyPressesPerEvent||void 0!==c.minDuration&&a.currentScrollDuration<c.minDuration||void 0!==c.maxDuration&&a.currentScrollDuration>c.maxDuration||void 0!==c.custom&&c.custom(a)!==!0||(c.previousComputedWaypoint=c.computedWaypoint,c.callback(a),c.noOfCallbacksTriggered++,c.noOfWaypointsTriggered=1,c.computedWaypoint=f(a.element,c.waypoint,c.waypointRelativeTo,c.waypointOffset,c.waypointOffsetRelativeTo),a.computedScrollYOffset=i(),a.setupDeveloperIndicators(!0,!0))}return!1},ScrollIntent.prototype.whenScrolling=function(){var a=this;if(a.newDirection=a.scrollY>a.scrollYPrev?"down":"up",void 0!==a.scrollYPrev){for(var b=0;b<a.numberOfActions;b++){var c=a.actions[b];c.computedWaypoint=f(a.element,c.waypoint,c.waypointRelativeTo,c.waypointOffset,c.waypointOffsetRelativeTo),a.computedScrollYOffset=i(),a.setupDeveloperIndicators(!0,!0)}if(a.direction!==a.newDirection){if(a.settings.resetCallbacksPerActionOnDirectionChange===!0){for(var b=0;b<a.numberOfActions;b++)a.actions[b].noOfCallbacksTriggered=1,a.actions[b].noOfWaypointsTriggered=0;a.scrollYStart=a.scrollYPrev}a.settings.resetDurationOnDirectionChange===!0&&(a.startTime=+new Date)}a.direction=a.newDirection,a.checkConditions(),a.scrollAmount=Math.round(Math.abs(a.scrollY-a.scrollYPrev))}return a.scrolling(a),!1},ScrollIntent.prototype.stopScrollCheck=function(){var a=this;clearInterval(a.scrollCheckTimer),a.isScrolling=!1,a.scrollAmount=0,a.scrollMethod=void 0,a.keyPressesPerEvent=0;for(var b=0;b<a.numberOfActions;b++){var c=a.actions[b];c.noOfCallbacksTriggered=1,c.noOfWaypointsTriggered=0}return a.scrollingStopped(a),!1},ScrollIntent.prototype.setupDeveloperIndicators=function(a,b){var c=this;if(l.developerIndicators===!0){var d="",e="";if(void 0!==m&&m.parentNode.removeChild(m),a===!0){if(0!==o.length)for(var f=o.length,g=0;f>g;g++)o[g].parentNode.removeChild(o[g]);for(var g=0;g<c.numberOfActions;g++)if(void 0!==c.actions[g].computedWaypoint){var h=g+1;d+="."+l.namespace+"-waypoint"+h+"{position: absolute; z-index: 99999; top:"+c.actions[g].computedWaypoint+"px; border: red solid 2px; left: 0; right: 0;}."+c.settings.namespace+"-waypoint"+h+':after{position: absolute; top: 0; text-align: center; width: 200px; height: 20px; content: "ScrollIntent: Waypoint '+h+'"; background: black; background: rgba(0,0,0,.8); color: white; padding: 12px; left: 20px; border: none;}',o[g]=document.createElement("div"),o[g].className=c.settings.namespace+"-waypoint"+h+" "+c.settings.namespace+"-indicator",document.body.appendChild(o[g])}}b===!0&&(e="."+c.settings.namespace+"-scrolly{position: fixed; z-index: 99999; top: "+c.computedScrollYOffset+"px; border: blue solid 2px; left: 0; right: 0;}",void 0!==n&&n.parentNode.removeChild(n),n=document.createElement("div"),n.className=c.settings.namespace+"-scrolly "+c.settings.namespace+"-indicator",document.body.appendChild(n)),m=document.createElement("style");var i=d+e;m.className=c.settings.namespace+"-indicator-styles",m.type="text/css",m.styleSheet?m.styleSheet.cssText=i:m.appendChild(document.createTextNode(i));var j=document.head||document.getElementsByTagName("head")[0];j.appendChild(m)}return!1},ScrollIntent.prototype.setUpActions=function(){for(var a=this,b=0;b<a.numberOfActions;b++){var c=a.actions[b];c.noOfCallbacksTriggered=0,c.noOfWaypointsTriggered=0,c.computedWaypoint=f(a.element,c.waypoint,c.waypointRelativeTo,c.waypointOffset,c.waypointOffsetRelativeTo),c.afterWaypoint=a.scrollY>c.computedWaypoint?!0:!1,void 0===c.scrollMethod||c.scrollMethod instanceof Array||(c.scrollMethod=[c.scrollMethod])}return!1},ScrollIntent}();
-
-
-	module.exports.init = function() {
-	    var Rx = __webpack_require__(70);
-
-	    var picasso = __webpack_require__(1);
-
-	    var PLAY_SPEED = 10;
-
-	    var isPlaying = false;
-	    var isPlayingInterval;
-	    var bodyHeight = $('body').height();
-	    var na=0;
-
-	    const keyUpPressed = Rx.Observable.fromEvent(document, 'keyup', function(e){
-	      e.preventDefault();
-	      return e;
-	    });
-
-	    const backKey = keyUpPressed
-	      .filter(e => e.keyCode === 38)
-	    const nextKey = keyUpPressed
-	      .filter(e => e.keyCode === 40)
-
-	    const toggleUpClicked = Rx.Observable.fromEvent($("#toggleUp"), 'click');
-	    const toggleDownClicked = Rx.Observable.fromEvent($("#toggleDown"), 'click')
-
-	    Rx.Observable.merge(nextKey, toggleDownClicked)
-	      .subscribe(e => {
-	        console.log('NEXT')
-	        picasso.action('next')
-	      });
-
-	    Rx.Observable.merge(backKey, toggleUpClicked)
-	      .subscribe(e => {
-	        console.log('PREVIOUS')
-	        picasso.action('previous')
-	      });
-
-	    $("#togglePlay").on('click', function(e) {
-	      console.log("CLICK");
-	      if(isPlaying) { pause() } else { play() }
-	    });
-
-	    keyUpPressed
-	      .filter(e => e.keyCode === 80 || e.keyCode === 32)
-	      .subscribe(e => {
-	        if (isPlaying) { pause() } else { play() }
-	      });
-
-	    function play() {
-	      console.log("PLAY")
-	      isPlayingInterval = setInterval(function() {
-	        picasso.action('next');
-	      }, 5000);
-	      $("#togglePlay").removeClass('fa-play').addClass('fa-pause');
-	      isPlaying = true;
-	    }
-
-	    function pause() {
-	      console.log("PAUSE");
-	      clearInterval(isPlayingInterval);
-	      isPlaying = false;
-	      $("#togglePlay").removeClass('fa-pause').addClass('fa-play');
-	    }
-
-	};
-
-
-/***/ },
-/* 68 */
-/***/ function(module, exports) {
-
-	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">But that's okay.</div>\n  </div>\n</div>\n";
-
-/***/ },
-/* 69 */
-/***/ function(module, exports) {
-
-	module.exports = [
-		{
-			"wrapper": "#yetthatsokay",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						0,
-						1.25
-					]
-				}
-			]
-		},
-		{
-			"wrapper": "#yetthatsokay",
-			"duration": "100%",
-			"focus": true,
-			"animations": [
-				{}
-			]
-		},
-		{
-			"wrapper": "#yetthatsokay",
-			"duration": "100%",
-			"animations": [
-				{
-					"selector": ".display-4",
-					"opacity": [
-						2,
-						0
-					]
-				}
-			]
-		}
-	];
-
-/***/ },
-/* 70 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global, process) {// Copyright (c) Microsoft, All rights reserved. See License.txt in the project root for license information.
@@ -15136,10 +12642,10 @@
 
 	}.call(this));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(71)(module), (function() { return this; }()), __webpack_require__(72)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)(module), (function() { return this; }()), __webpack_require__(4)))
 
 /***/ },
-/* 71 */
+/* 3 */
 /***/ function(module, exports) {
 
 	module.exports = function(module) {
@@ -15155,7 +12661,7 @@
 
 
 /***/ },
-/* 72 */
+/* 4 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -15250,6 +12756,3544 @@
 	};
 	process.umask = function() { return 0; };
 
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var looper = __webpack_require__(6);
+
+	module.exports.next = next;
+
+	module.exports.config = function (config) {
+	  looper.config(config);
+	};
+
+	module.exports.play = function () {
+	  looper.play();
+	};
+
+	function next(id) {
+	  looper.next(id);
+	}
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var Howl = __webpack_require__(7).Howl;
+
+	var loops = {};
+	var loop;
+
+	module.exports.config = function (config) {
+	  loops = config.map(function (c) {
+	    var audioConfig = {
+	      src: ['media/' + c.audio.src + '.mp3'],
+	      html5: true,
+	      volume: 0
+	    };
+	    return {
+	      'id': c.id,
+	      'vol': c.audio.max,
+	      'sound1': new Howl(audioConfig),
+	      'sound2': new Howl(audioConfig)
+	    };
+	  }).reduce(function (prev, next) {
+	    prev[next.id] = next;return prev;
+	  }, {});
+	};
+
+	module.exports.next = function (id) {
+	  loop = loops[id];
+	};
+
+	module.exports.pause = function (config) {};
+
+	module.exports.play = function (config) {
+	  looper();
+	};
+
+	module.exports.stop = function (config) {};
+
+	function looper() {
+
+	  'use strict';
+
+	  var fadePercent = loop.sound1.duration() > 5 ? 0.01 : 0.015; // 2% or 1% depending on if sound is over 5 seconds
+	  var faderate = 1 - fadePercent;
+	  var duration = loop.sound1.duration() * 1000 * (1 - fadePercent);
+	  var volume = loop.vol;
+	  // console.log(faderate, fadePercent, duration, volume);
+
+	  loop.sound1.play();
+	  loop.sound1.fade(0, volume, duration * fadePercent);
+
+	  setTimeout(function () {
+	    loop.sound1.fade(volume, 0, duration * fadePercent);
+	  }, duration * faderate);
+
+	  setTimeout(function () {
+	    loop.sound2.play();
+	    loop.sound2.fade(0, volume, duration * fadePercent);
+	  }, duration * faderate);
+
+	  setTimeout(function () {
+	    loop.sound2.fade(volume, 0, duration * fadePercent);
+	    looper();
+	  }, duration * 2 * faderate);
+	}
+
+	module.exports.loop = looper;
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(global) {/*! howler.js v2.0.0-beta7 | (c) 2013-2016, James Simpson of GoldFire Studios | MIT License | howlerjs.com */
+	!function(){"use strict";function e(){try{"undefined"!=typeof AudioContext?n=new AudioContext:"undefined"!=typeof webkitAudioContext?n=new webkitAudioContext:o=!1}catch(e){o=!1}if(!o)if("undefined"!=typeof Audio)try{var d=new Audio;"undefined"==typeof d.oncanplaythrough&&(u="canplay")}catch(e){t=!0}else t=!0;try{var d=new Audio;d.muted&&(t=!0)}catch(e){}var a=/iP(hone|od|ad)/.test(navigator.platform),i=navigator.appVersion.match(/OS (\d+)_(\d+)_?(\d+)?/),_=i?parseInt(i[1],10):null;if(a&&_&&9>_){var s=/safari/.test(window.navigator.userAgent.toLowerCase());(window.navigator.standalone&&!s||!window.navigator.standalone&&!s)&&(o=!1)}o&&(r="undefined"==typeof n.createGain?n.createGainNode():n.createGain(),r.gain.value=1,r.connect(n.destination))}var n=null,o=!0,t=!1,r=null,u="canplaythrough";e();var d=function(){this.init()};d.prototype={init:function(){var e=this||a;return e._codecs={},e._howls=[],e._muted=!1,e._volume=1,e.state=n?n.state||"running":"running",e.autoSuspend=!0,e._autoSuspend(),e.mobileAutoEnable=!0,e.noAudio=t,e.usingWebAudio=o,e.ctx=n,t||e._setupCodecs(),e},volume:function(e){var n=this||a;if(e=parseFloat(e),"undefined"!=typeof e&&e>=0&&1>=e){n._volume=e,o&&(r.gain.value=e);for(var t=0;t<n._howls.length;t++)if(!n._howls[t]._webAudio)for(var u=n._howls[t]._getSoundIds(),d=0;d<u.length;d++){var i=n._howls[t]._soundById(u[d]);i&&i._node&&(i._node.volume=i._volume*e)}return n}return n._volume},mute:function(e){var n=this||a;n._muted=e,o&&(r.gain.value=e?0:n._volume);for(var t=0;t<n._howls.length;t++)if(!n._howls[t]._webAudio)for(var u=n._howls[t]._getSoundIds(),d=0;d<u.length;d++){var i=n._howls[t]._soundById(u[d]);i&&i._node&&(i._node.muted=e?!0:i._muted)}return n},unload:function(){for(var o=this||a,t=o._howls.length-1;t>=0;t--)o._howls[t].unload();return o.usingWebAudio&&"undefined"!=typeof n.close&&(o.ctx=null,n.close(),e(),o.ctx=n),o},codecs:function(e){return(this||a)._codecs[e]},_setupCodecs:function(){var e=this||a,n=new Audio,o=n.canPlayType("audio/mpeg;").replace(/^no$/,""),t=/OPR\//.test(navigator.userAgent);return e._codecs={mp3:!(t||!o&&!n.canPlayType("audio/mp3;").replace(/^no$/,"")),mpeg:!!o,opus:!!n.canPlayType('audio/ogg; codecs="opus"').replace(/^no$/,""),ogg:!!n.canPlayType('audio/ogg; codecs="vorbis"').replace(/^no$/,""),oga:!!n.canPlayType('audio/ogg; codecs="vorbis"').replace(/^no$/,""),wav:!!n.canPlayType('audio/wav; codecs="1"').replace(/^no$/,""),aac:!!n.canPlayType("audio/aac;").replace(/^no$/,""),m4a:!!(n.canPlayType("audio/x-m4a;")||n.canPlayType("audio/m4a;")||n.canPlayType("audio/aac;")).replace(/^no$/,""),mp4:!!(n.canPlayType("audio/x-mp4;")||n.canPlayType("audio/mp4;")||n.canPlayType("audio/aac;")).replace(/^no$/,""),weba:!!n.canPlayType('audio/webm; codecs="vorbis"').replace(/^no$/,""),webm:!!n.canPlayType('audio/webm; codecs="vorbis"').replace(/^no$/,""),dolby:!!n.canPlayType('audio/mp4; codecs="ec-3"').replace(/^no$/,"")},e},_enableMobileAudio:function(){var e=this||a,o=/iPhone|iPad|iPod|Android|BlackBerry|BB10|Silk/i.test(navigator.userAgent),t=!!("ontouchend"in window||navigator.maxTouchPoints>0||navigator.msMaxTouchPoints>0);if(!n||!e._mobileEnabled&&o&&t){e._mobileEnabled=!1;var r=function(){var o=n.createBuffer(1,1,22050),t=n.createBufferSource();t.buffer=o,t.connect(n.destination),"undefined"==typeof t.start?t.noteOn(0):t.start(0),t.onended=function(){t.disconnect(0),e._mobileEnabled=!0,e.mobileAutoEnable=!1,document.removeEventListener("touchend",r,!0)}};return document.addEventListener("touchend",r,!0),e}},_autoSuspend:function(){var e=this;if(e.autoSuspend&&n&&"undefined"!=typeof n.suspend&&o){for(var t=0;t<e._howls.length;t++)if(e._howls[t]._webAudio)for(var r=0;r<e._howls[t]._sounds.length;r++)if(!e._howls[t]._sounds[r]._paused)return e;return e._suspendTimer=setTimeout(function(){e.autoSuspend&&(e._suspendTimer=null,e.state="suspending",n.suspend().then(function(){e.state="suspended",e._resumeAfterSuspend&&(delete e._resumeAfterSuspend,e._autoResume())}))},3e4),e}},_autoResume:function(){var e=this;if(n&&"undefined"!=typeof n.resume&&o)return"running"===e.state&&e._suspendTimer?(clearTimeout(e._suspendTimer),e._suspendTimer=null):"suspended"===e.state?(e.state="resuming",n.resume().then(function(){e.state="running"}),e._suspendTimer&&(clearTimeout(e._suspendTimer),e._suspendTimer=null)):"suspending"===e.state&&(e._resumeAfterSuspend=!0),e}};var a=new d,i=function(e){var n=this;return e.src&&0!==e.src.length?void n.init(e):void console.error("An array of source files must be passed with any new Howl.")};i.prototype={init:function(e){var t=this;return t._autoplay=e.autoplay||!1,t._format="string"!=typeof e.format?e.format:[e.format],t._html5=e.html5||!1,t._muted=e.mute||!1,t._loop=e.loop||!1,t._pool=e.pool||5,t._preload="boolean"==typeof e.preload?e.preload:!0,t._rate=e.rate||1,t._sprite=e.sprite||{},t._src="string"!=typeof e.src?e.src:[e.src],t._volume=void 0!==e.volume?e.volume:1,t._duration=0,t._loaded=!1,t._sounds=[],t._endTimers={},t._queue=[],t._onend=e.onend?[{fn:e.onend}]:[],t._onfade=e.onfade?[{fn:e.onfade}]:[],t._onload=e.onload?[{fn:e.onload}]:[],t._onloaderror=e.onloaderror?[{fn:e.onloaderror}]:[],t._onpause=e.onpause?[{fn:e.onpause}]:[],t._onplay=e.onplay?[{fn:e.onplay}]:[],t._onstop=e.onstop?[{fn:e.onstop}]:[],t._onmute=e.onmute?[{fn:e.onmute}]:[],t._onvolume=e.onvolume?[{fn:e.onvolume}]:[],t._onrate=e.onrate?[{fn:e.onrate}]:[],t._onseek=e.onseek?[{fn:e.onseek}]:[],t._webAudio=o&&!t._html5,"undefined"!=typeof n&&n&&a.mobileAutoEnable&&a._enableMobileAudio(),a._howls.push(t),t._preload&&t.load(),t},load:function(){var e=this,n=null;if(t)return void e._emit("loaderror",null,"No audio support.");"string"==typeof e._src&&(e._src=[e._src]);for(var o=0;o<e._src.length;o++){var r,u;if(e._format&&e._format[o]?r=e._format[o]:(u=e._src[o],r=/^data:audio\/([^;,]+);/i.exec(u),r||(r=/\.([^.]+)$/.exec(u.split("?",1)[0])),r&&(r=r[1].toLowerCase())),a.codecs(r)){n=e._src[o];break}}return n?(e._src=n,"https:"===window.location.protocol&&"http:"===n.slice(0,5)&&(e._html5=!0,e._webAudio=!1),new _(e),e._webAudio&&l(e),e):void e._emit("loaderror",null,"No codec support for selected audio sources.")},play:function(e){var o=this,t=arguments,r=null;if("number"==typeof e)r=e,e=null;else if("undefined"==typeof e){e="__default";for(var d=0,i=0;i<o._sounds.length;i++)o._sounds[i]._paused&&!o._sounds[i]._ended&&(d++,r=o._sounds[i]._id);1===d?e=null:r=null}var _=r?o._soundById(r):o._inactiveSound();if(!_)return null;if(r&&!e&&(e=_._sprite||"__default"),!o._loaded&&!o._sprite[e])return o._queue.push({event:"play",action:function(){o.play(o._soundById(_._id)?_._id:void 0)}}),_._id;if(r&&!_._paused)return _._id;o._webAudio&&a._autoResume();var s=_._seek>0?_._seek:o._sprite[e][0]/1e3,l=(o._sprite[e][0]+o._sprite[e][1])/1e3-s,f=1e3*l/Math.abs(_._rate);f!==1/0&&(o._endTimers[_._id]=setTimeout(o._ended.bind(o,_),f)),_._paused=!1,_._ended=!1,_._sprite=e,_._seek=s,_._start=o._sprite[e][0]/1e3,_._stop=(o._sprite[e][0]+o._sprite[e][1])/1e3,_._loop=!(!_._loop&&!o._sprite[e][2]);var c=_._node;if(o._webAudio){var p=function(){o._refreshBuffer(_);var e=_._muted||o._muted?0:_._volume*a.volume();c.gain.setValueAtTime(e,n.currentTime),_._playStart=n.currentTime,"undefined"==typeof c.bufferSource.start?_._loop?c.bufferSource.noteGrainOn(0,s,86400):c.bufferSource.noteGrainOn(0,s,l):_._loop?c.bufferSource.start(0,s,86400):c.bufferSource.start(0,s,l),o._endTimers[_._id]||f===1/0||(o._endTimers[_._id]=setTimeout(o._ended.bind(o,_),f)),t[1]||setTimeout(function(){o._emit("play",_._id)},0)};o._loaded?p():(o.once("load",p,_._id),o._clearTimer(_._id))}else{var m=function(){c.currentTime=s,c.muted=_._muted||o._muted||a._muted||c.muted,c.volume=_._volume*a.volume(),c.playbackRate=_._rate,setTimeout(function(){c.play(),t[1]||o._emit("play",_._id)},0)};if(4===c.readyState||!c.readyState&&navigator.isCocoonJS)m();else{var v=function(){f!==1/0&&(o._endTimers[_._id]=setTimeout(o._ended.bind(o,_),f)),m(),c.removeEventListener(u,v,!1)};c.addEventListener(u,v,!1),o._clearTimer(_._id)}}return _._id},pause:function(e){var n=this;if(!n._loaded)return n._queue.push({event:"pause",action:function(){n.pause(e)}}),n;for(var o=n._getSoundIds(e),t=0;t<o.length;t++){n._clearTimer(o[t]);var r=n._soundById(o[t]);if(r&&!r._paused){if(r._seek=n.seek(o[t]),r._paused=!0,n._stopFade(o[t]),r._node)if(n._webAudio){if(!r._node.bufferSource)return n;"undefined"==typeof r._node.bufferSource.stop?r._node.bufferSource.noteOff(0):r._node.bufferSource.stop(0),r._node.bufferSource=null}else isNaN(r._node.duration)&&r._node.duration!==1/0||r._node.pause();arguments[1]||n._emit("pause",r._id)}}return n},stop:function(e){var n=this;if(!n._loaded)return"undefined"!=typeof n._sounds[0]._sprite&&n._queue.push({event:"stop",action:function(){n.stop(e)}}),n;for(var o=n._getSoundIds(e),t=0;t<o.length;t++){n._clearTimer(o[t]);var r=n._soundById(o[t]);if(r&&!r._paused){if(r._seek=r._start||0,r._paused=!0,r._ended=!0,n._stopFade(o[t]),r._node)if(n._webAudio){if(!r._node.bufferSource)return n;"undefined"==typeof r._node.bufferSource.stop?r._node.bufferSource.noteOff(0):r._node.bufferSource.stop(0),r._node.bufferSource=null}else isNaN(r._node.duration)&&r._node.duration!==1/0||(r._node.pause(),r._node.currentTime=r._start||0);n._emit("stop",r._id)}}return n},mute:function(e,o){var t=this;if(!t._loaded)return t._queue.push({event:"mute",action:function(){t.mute(e,o)}}),t;if("undefined"==typeof o){if("boolean"!=typeof e)return t._muted;t._muted=e}for(var r=t._getSoundIds(o),u=0;u<r.length;u++){var d=t._soundById(r[u]);d&&(d._muted=e,t._webAudio&&d._node?d._node.gain.setValueAtTime(e?0:d._volume*a.volume(),n.currentTime):d._node&&(d._node.muted=a._muted?!0:e),t._emit("mute",d._id))}return t},volume:function(){var e,o,t=this,r=arguments;if(0===r.length)return t._volume;if(1===r.length){var u=t._getSoundIds(),d=u.indexOf(r[0]);d>=0?o=parseInt(r[0],10):e=parseFloat(r[0])}else r.length>=2&&(e=parseFloat(r[0]),o=parseInt(r[1],10));var i;if(!("undefined"!=typeof e&&e>=0&&1>=e))return i=o?t._soundById(o):t._sounds[0],i?i._volume:0;if(!t._loaded)return t._queue.push({event:"volume",action:function(){t.volume.apply(t,r)}}),t;"undefined"==typeof o&&(t._volume=e),o=t._getSoundIds(o);for(var _=0;_<o.length;_++)i=t._soundById(o[_]),i&&(i._volume=e,r[2]||t._stopFade(o[_]),t._webAudio&&i._node&&!i._muted?i._node.gain.setValueAtTime(e*a.volume(),n.currentTime):i._node&&!i._muted&&(i._node.volume=e*a.volume()),t._emit("volume",i._id));return t},fade:function(e,o,t,r){var u=this;if(!u._loaded)return u._queue.push({event:"fade",action:function(){u.fade(e,o,t,r)}}),u;u.volume(e,r);for(var d=u._getSoundIds(r),a=0;a<d.length;a++){var i=u._soundById(d[a]);if(i)if(r||u._stopFade(d[a]),u._webAudio&&!i._muted){var _=n.currentTime,s=_+t/1e3;i._volume=e,i._node.gain.setValueAtTime(e,_),i._node.gain.linearRampToValueAtTime(o,s),i._timeout=setTimeout(function(e,t){delete t._timeout,setTimeout(function(){t._volume=o,u._emit("fade",e)},s-n.currentTime>0?Math.ceil(1e3*(s-n.currentTime)):0)}.bind(u,d[a],i),t)}else{var l=Math.abs(e-o),f=e>o?"out":"in",c=l/.01,p=t/c;!function(){var n=e;i._interval=setInterval(function(e,t){n+="in"===f?.01:-.01,n=Math.max(0,n),n=Math.min(1,n),n=Math.round(100*n)/100,u.volume(n,e,!0),n===o&&(clearInterval(t._interval),delete t._interval,u._emit("fade",e))}.bind(u,d[a],i),p)}()}}return u},_stopFade:function(e){var o=this,t=o._soundById(e);return t._interval?(clearInterval(t._interval),delete t._interval,o._emit("fade",e)):t._timeout&&(clearTimeout(t._timeout),delete t._timeout,t._node.gain.cancelScheduledValues(n.currentTime),o._emit("fade",e)),o},loop:function(){var e,n,o,t=this,r=arguments;if(0===r.length)return t._loop;if(1===r.length){if("boolean"!=typeof r[0])return o=t._soundById(parseInt(r[0],10)),o?o._loop:!1;e=r[0],t._loop=e}else 2===r.length&&(e=r[0],n=parseInt(r[1],10));for(var u=t._getSoundIds(n),d=0;d<u.length;d++)o=t._soundById(u[d]),o&&(o._loop=e,t._webAudio&&o._node&&o._node.bufferSource&&(o._node.bufferSource.loop=e));return t},rate:function(){var e,n,o=this,t=arguments;if(0===t.length)n=o._sounds[0]._id;else if(1===t.length){var r=o._getSoundIds(),u=r.indexOf(t[0]);u>=0?n=parseInt(t[0],10):e=parseFloat(t[0])}else 2===t.length&&(e=parseFloat(t[0]),n=parseInt(t[1],10));var d;if("number"!=typeof e)return d=o._soundById(n),d?d._rate:o._rate;if(!o._loaded)return o._queue.push({event:"rate",action:function(){o.rate.apply(o,t)}}),o;"undefined"==typeof n&&(o._rate=e),n=o._getSoundIds(n);for(var a=0;a<n.length;a++)if(d=o._soundById(n[a])){d._rate=e,o._webAudio&&d._node&&d._node.bufferSource?d._node.bufferSource.playbackRate.value=e:d._node&&(d._node.playbackRate=e);var i=o.seek(n[a]),_=(o._sprite[d._sprite][0]+o._sprite[d._sprite][1])/1e3-i,s=1e3*_/Math.abs(d._rate);o._clearTimer(n[a]),o._endTimers[n[a]]=setTimeout(o._ended.bind(o,d),s),o._emit("rate",d._id)}return o},seek:function(){var e,o,t=this,r=arguments;if(0===r.length)o=t._sounds[0]._id;else if(1===r.length){var u=t._getSoundIds(),d=u.indexOf(r[0]);d>=0?o=parseInt(r[0],10):(o=t._sounds[0]._id,e=parseFloat(r[0]))}else 2===r.length&&(e=parseFloat(r[0]),o=parseInt(r[1],10));if("undefined"==typeof o)return t;if(!t._loaded)return t._queue.push({event:"seek",action:function(){t.seek.apply(t,r)}}),t;var a=t._soundById(o);if(a){if(!(e>=0))return t._webAudio?a._seek+(t.playing(o)?n.currentTime-a._playStart:0):a._node.currentTime;var i=t.playing(o);i&&t.pause(o,!0),a._seek=e,t._clearTimer(o),i&&t.play(o,!0),t._emit("seek",o)}return t},playing:function(e){var n=this,o=n._soundById(e)||n._sounds[0];return o?!o._paused:!1},duration:function(){return this._duration},unload:function(){for(var e=this,n=e._sounds,o=0;o<n.length;o++){n[o]._paused||(e.stop(n[o]._id),e._emit("end",n[o]._id)),e._webAudio||(n[o]._node.src="",n[o]._node.removeEventListener("error",n[o]._errorFn,!1),n[o]._node.removeEventListener(u,n[o]._loadFn,!1)),delete n[o]._node,e._clearTimer(n[o]._id);var t=a._howls.indexOf(e);t>=0&&a._howls.splice(t,1)}return s&&delete s[e._src],e._sounds=[],e=null,null},on:function(e,n,o,t){var r=this,u=r["_on"+e];return"function"==typeof n&&u.push(t?{id:o,fn:n,once:t}:{id:o,fn:n}),r},off:function(e,n,o){var t=this,r=t["_on"+e];if(n){for(var u=0;u<r.length;u++)if(n===r[u].fn&&o===r[u].id){r.splice(u,1);break}}else if(e)t["_on"+e]=[];else for(var d=Object.keys(t),u=0;u<d.length;u++)0===d[u].indexOf("_on")&&Array.isArray(t[d[u]])&&(t[d[u]]=[]);return t},once:function(e,n,o){var t=this;return t.on(e,n,o,1),t},_emit:function(e,n,o){for(var t=this,r=t["_on"+e],u=r.length-1;u>=0;u--)r[u].id&&r[u].id!==n&&"load"!==e||(setTimeout(function(e){e.call(this,n,o)}.bind(t,r[u].fn),0),r[u].once&&t.off(e,r[u].fn,r[u].id));return t},_loadQueue:function(){var e=this;if(e._queue.length>0){var n=e._queue[0];e.once(n.event,function(){e._queue.shift(),e._loadQueue()}),n.action()}return e},_ended:function(e){var o=this,t=e._sprite,r=!(!e._loop&&!o._sprite[t][2]);if(o._emit("end",e._id),!o._webAudio&&r&&o.stop(e._id).play(e._id),o._webAudio&&r){o._emit("play",e._id),e._seek=e._start||0,e._playStart=n.currentTime;var u=1e3*(e._stop-e._start)/Math.abs(e._rate);o._endTimers[e._id]=setTimeout(o._ended.bind(o,e),u)}return o._webAudio&&!r&&(e._paused=!0,e._ended=!0,e._seek=e._start||0,o._clearTimer(e._id),e._node.bufferSource=null,a._autoSuspend()),o._webAudio||r||o.stop(e._id),o},_clearTimer:function(e){var n=this;return n._endTimers[e]&&(clearTimeout(n._endTimers[e]),delete n._endTimers[e]),n},_soundById:function(e){for(var n=this,o=0;o<n._sounds.length;o++)if(e===n._sounds[o]._id)return n._sounds[o];return null},_inactiveSound:function(){var e=this;e._drain();for(var n=0;n<e._sounds.length;n++)if(e._sounds[n]._ended)return e._sounds[n].reset();return new _(e)},_drain:function(){var e=this,n=e._pool,o=0,t=0;if(!(e._sounds.length<n)){for(t=0;t<e._sounds.length;t++)e._sounds[t]._ended&&o++;for(t=e._sounds.length-1;t>=0;t--){if(n>=o)return;e._sounds[t]._ended&&(e._webAudio&&e._sounds[t]._node&&e._sounds[t]._node.disconnect(0),e._sounds.splice(t,1),o--)}}},_getSoundIds:function(e){var n=this;if("undefined"==typeof e){for(var o=[],t=0;t<n._sounds.length;t++)o.push(n._sounds[t]._id);return o}return[e]},_refreshBuffer:function(e){var o=this;return e._node.bufferSource=n.createBufferSource(),e._node.bufferSource.buffer=s[o._src],e._node.bufferSource.connect(e._panner?e._panner:e._node),e._node.bufferSource.loop=e._loop,e._loop&&(e._node.bufferSource.loopStart=e._start||0,e._node.bufferSource.loopEnd=e._stop),e._node.bufferSource.playbackRate.value=o._rate,o}};var _=function(e){this._parent=e,this.init()};if(_.prototype={init:function(){var e=this,n=e._parent;return e._muted=n._muted,e._loop=n._loop,e._volume=n._volume,e._muted=n._muted,e._rate=n._rate,e._seek=0,e._paused=!0,e._ended=!0,e._sprite="__default",e._id=Math.round(Date.now()*Math.random()),n._sounds.push(e),e.create(),e},create:function(){var e=this,o=e._parent,t=a._muted||e._muted||e._parent._muted?0:e._volume*a.volume();return o._webAudio?(e._node="undefined"==typeof n.createGain?n.createGainNode():n.createGain(),e._node.gain.setValueAtTime(t,n.currentTime),e._node.paused=!0,e._node.connect(r)):(e._node=new Audio,e._errorFn=e._errorListener.bind(e),e._node.addEventListener("error",e._errorFn,!1),e._loadFn=e._loadListener.bind(e),e._node.addEventListener(u,e._loadFn,!1),e._node.src=o._src,e._node.preload="auto",e._node.volume=t,e._node.load()),e},reset:function(){var e=this,n=e._parent;return e._muted=n._muted,e._loop=n._loop,e._volume=n._volume,e._muted=n._muted,e._rate=n._rate,e._seek=0,e._paused=!0,e._ended=!0,e._sprite="__default",e._id=Math.round(Date.now()*Math.random()),e},_errorListener:function(){var e=this;e._node.error&&4===e._node.error.code&&(a.noAudio=!0),e._parent._emit("loaderror",e._id,e._node.error?e._node.error.code:0),e._node.removeEventListener("error",e._errorListener,!1)},_loadListener:function(){var e=this,n=e._parent;n._duration=Math.ceil(10*e._node.duration)/10,0===Object.keys(n._sprite).length&&(n._sprite={__default:[0,1e3*n._duration]}),n._loaded||(n._loaded=!0,n._emit("load"),n._loadQueue()),n._autoplay&&n.play(),e._node.removeEventListener(u,e._loadFn,!1)}},o)var s={},l=function(e){var n=e._src;if(s[n])return e._duration=s[n].duration,void p(e);if(/^data:[^;]+;base64,/.test(n)){window.atob=window.atob||function(e){for(var n,o,t="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",r=String(e).replace(/=+$/,""),u=0,d=0,a="";o=r.charAt(d++);~o&&(n=u%4?64*n+o:o,u++%4)?a+=String.fromCharCode(255&n>>(-2*u&6)):0)o=t.indexOf(o);return a};for(var o=atob(n.split(",")[1]),t=new Uint8Array(o.length),r=0;r<o.length;++r)t[r]=o.charCodeAt(r);c(t.buffer,e)}else{var u=new XMLHttpRequest;u.open("GET",n,!0),u.responseType="arraybuffer",u.onload=function(){c(u.response,e)},u.onerror=function(){e._webAudio&&(e._html5=!0,e._webAudio=!1,e._sounds=[],delete s[n],e.load())},f(u)}},f=function(e){try{e.send()}catch(n){e.onerror()}},c=function(e,o){n.decodeAudioData(e,function(e){e&&o._sounds.length>0&&(s[o._src]=e,p(o,e))},function(){o._emit("loaderror",null,"Decoding audio data failed.")})},p=function(e,n){n&&!e._duration&&(e._duration=n.duration),0===Object.keys(e._sprite).length&&(e._sprite={__default:[0,1e3*e._duration]}),e._loaded||(e._loaded=!0,e._emit("load"),e._loadQueue()),e._autoplay&&e.play()};"function"=="function"&&__webpack_require__(8)&&!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_RESULT__ = function(){return{Howler:a,Howl:i}}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__)),"undefined"!=typeof exports&&(exports.Howler=a,exports.Howl=i),"undefined"!=typeof window?(window.HowlerGlobal=d,window.Howler=a,window.Howl=i,window.Sound=_):"undefined"!=typeof global&&(global.HowlerGlobal=d,global.Howler=a,global.Howl=i,global.Sound=_)}();
+	/*! Effects Plugin */
+	!function(){"use strict";HowlerGlobal.prototype._pos=[0,0,0],HowlerGlobal.prototype._orientation=[0,0,-1,0,1,0],HowlerGlobal.prototype._velocity=[0,0,0],HowlerGlobal.prototype._listenerAttr={dopplerFactor:1,speedOfSound:343.3},HowlerGlobal.prototype.pos=function(e,n,t){var o=this;return o.ctx&&o.ctx.listener?(n="number"!=typeof n?o._pos[1]:n,t="number"!=typeof t?o._pos[2]:t,"number"!=typeof e?o._pos:(o._pos=[e,n,t],o.ctx.listener.setPosition(o._pos[0],o._pos[1],o._pos[2]),o)):o},HowlerGlobal.prototype.orientation=function(e,n,t,o,r,i){var a=this;if(!a.ctx||!a.ctx.listener)return a;var p=a._orientation;return n="number"!=typeof n?p[1]:n,t="number"!=typeof t?p[2]:t,o="number"!=typeof o?p[3]:o,r="number"!=typeof r?p[4]:r,i="number"!=typeof i?p[5]:i,"number"!=typeof e?p:(a._orientation=[e,n,t,o,r,i],a.ctx.listener.setOrientation(e,n,t,o,r,i),a)},HowlerGlobal.prototype.velocity=function(e,n,t){var o=this;return o.ctx&&o.ctx.listener?(n="number"!=typeof n?o._velocity[1]:n,t="number"!=typeof t?o._velocity[2]:t,"number"!=typeof e?o._velocity:(o._velocity=[e,n,t],o.ctx.listener.setVelocity(o._velocity[0],o._velocity[1],o._velocity[2]),o)):o},HowlerGlobal.prototype.listenerAttr=function(e){var n=this;if(!n.ctx||!n.ctx.listener)return n;var t=n._listenerAttr;return e?(n._listenerAttr={dopplerFactor:"undefined"!=typeof e.dopplerFactor?e.dopplerFactor:t.dopplerFactor,speedOfSound:"undefined"!=typeof e.speedOfSound?e.speedOfSound:t.speedOfSound},n.ctx.listener.dopplerFactor=t.dopplerFactor,n.ctx.listener.speedOfSound=t.speedOfSound,n):t},Howl.prototype.init=function(e){return function(n){var t=this;return t._orientation=n.orientation||[1,0,0],t._pos=n.pos||null,t._velocity=n.velocity||[0,0,0],t._pannerAttr={coneInnerAngle:"undefined"!=typeof n.coneInnerAngle?n.coneInnerAngle:360,coneOuterAngle:"undefined"!=typeof n.coneOuterAngle?n.coneOuterAngle:360,coneOuterGain:"undefined"!=typeof n.coneOuterGain?n.coneOuterGain:0,distanceModel:"undefined"!=typeof n.distanceModel?n.distanceModel:"inverse",maxDistance:"undefined"!=typeof n.maxDistance?n.maxDistance:1e4,panningModel:"undefined"!=typeof n.panningModel?n.panningModel:"HRTF",refDistance:"undefined"!=typeof n.refDistance?n.refDistance:1,rolloffFactor:"undefined"!=typeof n.rolloffFactor?n.rolloffFactor:1},e.call(this,n)}}(Howl.prototype.init),Howl.prototype.pos=function(n,t,o,r){var i=this;if(!i._webAudio)return i;if(!i._loaded)return i.once("play",function(){i.pos(n,t,o,r)}),i;if(t="number"!=typeof t?0:t,o="number"!=typeof o?-.5:o,"undefined"==typeof r){if("number"!=typeof n)return i._pos;i._pos=[n,t,o]}for(var a=i._getSoundIds(r),p=0;p<a.length;p++){var l=i._soundById(a[p]);if(l){if("number"!=typeof n)return l._pos;l._pos=[n,t,o],l._node&&(l._panner||e(l),l._panner.setPosition(n,t,o))}}return i},Howl.prototype.orientation=function(n,t,o,r){var i=this;if(!i._webAudio)return i;if(!i._loaded)return i.once("play",function(){i.orientation(n,t,o,r)}),i;if(t="number"!=typeof t?i._orientation[1]:t,o="number"!=typeof o?i._orientation[2]:o,"undefined"==typeof r){if("number"!=typeof n)return i._orientation;i._orientation=[n,t,o]}for(var a=i._getSoundIds(r),p=0;p<a.length;p++){var l=i._soundById(a[p]);if(l){if("number"!=typeof n)return l._orientation;l._orientation=[n,t,o],l._node&&(l._panner||e(l),l._panner.setOrientation(n,t,o))}}return i},Howl.prototype.velocity=function(n,t,o,r){var i=this;if(!i._webAudio)return i;if(!i._loaded)return i.once("play",function(){i.velocity(n,t,o,r)}),i;if(t="number"!=typeof t?i._velocity[1]:t,o="number"!=typeof o?i._velocity[2]:o,"undefined"==typeof r){if("number"!=typeof n)return i._velocity;i._velocity=[n,t,o]}for(var a=i._getSoundIds(r),p=0;p<a.length;p++){var l=i._soundById(a[p]);if(l){if("number"!=typeof n)return l._velocity;l._velocity=[n,t,o],l._node&&(l._panner||e(l),l._panner.setVelocity(n,t,o))}}return i},Howl.prototype.pannerAttr=function(){var n,t,o,r=this,i=arguments;if(!r._webAudio)return r;if(0===i.length)return r._pannerAttr;if(1===i.length){if("object"!=typeof i[0])return o=r._soundById(parseInt(i[0],10)),o?o._pannerAttr:r._pannerAttr;n=i[0],"undefined"==typeof t&&(r._pannerAttr={coneInnerAngle:"undefined"!=typeof n.coneInnerAngle?n.coneInnerAngle:r._coneInnerAngle,coneOuterAngle:"undefined"!=typeof n.coneOuterAngle?n.coneOuterAngle:r._coneOuterAngle,coneOuterGain:"undefined"!=typeof n.coneOuterGain?n.coneOuterGain:r._coneOuterGain,distanceModel:"undefined"!=typeof n.distanceModel?n.distanceModel:r._distanceModel,maxDistance:"undefined"!=typeof n.maxDistance?n.maxDistance:r._maxDistance,panningModel:"undefined"!=typeof n.panningModel?n.panningModel:r._panningModel,refDistance:"undefined"!=typeof n.refDistance?n.refDistance:r._refDistance,rolloffFactor:"undefined"!=typeof n.rolloffFactor?n.rolloffFactor:r._rolloffFactor})}else 2===i.length&&(n=i[0],t=parseInt(i[1],10));for(var a=r._getSoundIds(t),p=0;p<a.length;p++)if(o=r._soundById(a[p])){var l=o._pannerAttr;l={coneInnerAngle:"undefined"!=typeof n.coneInnerAngle?n.coneInnerAngle:l.coneInnerAngle,coneOuterAngle:"undefined"!=typeof n.coneOuterAngle?n.coneOuterAngle:l.coneOuterAngle,coneOuterGain:"undefined"!=typeof n.coneOuterGain?n.coneOuterGain:l.coneOuterGain,distanceModel:"undefined"!=typeof n.distanceModel?n.distanceModel:l.distanceModel,maxDistance:"undefined"!=typeof n.maxDistance?n.maxDistance:l.maxDistance,panningModel:"undefined"!=typeof n.panningModel?n.panningModel:l.panningModel,refDistance:"undefined"!=typeof n.refDistance?n.refDistance:l.refDistance,rolloffFactor:"undefined"!=typeof n.rolloffFactor?n.rolloffFactor:l.rolloffFactor};var c=o._panner;c?(c.coneInnerAngle=l.coneInnerAngle,c.coneOuterAngle=l.coneOuterAngle,c.coneOuterGain=l.coneOuterGain,c.distanceModel=l.distanceModel,c.maxDistance=l.maxDistance,c.panningModel=l.panningModel,c.refDistance=l.refDistance,c.rolloffFactor=l.rolloffFactor):(o._pos||(o._pos=r._pos||[0,0,-.5]),e(o))}return r},Sound.prototype.init=function(e){return function(){var n=this,t=n._parent;n._orientation=t._orientation,n._pos=t._pos,n._velocity=t._velocity,n._pannerAttr=t._pannerAttr,e.call(this),n._pos&&t.pos(n._pos[0],n._pos[1],n._pos[2],n._id)}}(Sound.prototype.init),Sound.prototype.reset=function(e){return function(){var n=this,t=n._parent;return n._orientation=t._orientation,n._pos=t._pos,n._velocity=t._velocity,n._pannerAttr=t._pannerAttr,e.call(this)}}(Sound.prototype.reset);var e=function(e){e._panner=Howler.ctx.createPanner(),e._panner.coneInnerAngle=e._pannerAttr.coneInnerAngle,e._panner.coneOuterAngle=e._pannerAttr.coneOuterAngle,e._panner.coneOuterGain=e._pannerAttr.coneOuterGain,e._panner.distanceModel=e._pannerAttr.distanceModel,e._panner.maxDistance=e._pannerAttr.maxDistance,e._panner.panningModel=e._pannerAttr.panningModel,e._panner.refDistance=e._pannerAttr.refDistance,e._panner.rolloffFactor=e._pannerAttr.rolloffFactor,e._panner.setPosition(e._pos[0],e._pos[1],e._pos[2]),e._panner.setOrientation(e._orientation[0],e._orientation[1],e._orientation[2]),e._panner.setVelocity(e._velocity[0],e._velocity[1],e._velocity[2]),e._panner.connect(e._node),e._paused||e._parent.pause(e._id).play(e._id)}}();
+
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 8 */
+/***/ function(module, exports) {
+
+	/* WEBPACK VAR INJECTION */(function(__webpack_amd_options__) {module.exports = __webpack_amd_options__;
+
+	/* WEBPACK VAR INJECTION */}.call(exports, {}))
+
+/***/ },
+/* 9 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	var $videoIndicator = $('#video-progress .progress');
+	var videoPlaying;
+	var $el;
+
+	$videoIndicator.hide();
+	module.exports.start = function ($newVideo) {
+	  $el = $newVideo[0];
+	  $videoIndicator.show();
+	  videoPlaying = true;
+	  loop();
+	};
+
+	module.exports.stop = function () {
+	  videoPlaying = false;
+	  $('#video-progress .progress').hide();
+	};
+
+	function loop() {
+	  window.requestAnimationFrame(function () {
+	    var rate = $el.currentTime / $el.duration;
+	    var percent = rate * 100;
+	    $videoIndicator.css({ 'width': percent + 'vw' });
+	    if (videoPlaying) {
+	      loop();
+	    }
+	  });
+	}
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+	// https://github.com/IanLunn/scrollIntent/blob/master/js/scrollIntent-min.js
+	var ScrollIntent = function () {
+	  "use strict";
+	  function a(a, b) {
+	    for (var c in b) {
+	      a[c] = b[c];
+	    }return a;
+	  }function b(a) {
+	    var b = { 32: "space", 38: "up", 40: "down" },
+	        c = b[a];return void 0 === c && (c = !1), c;
+	  }function c(a) {
+	    a();
+	  }function d(a) {
+	    switch (typeof a === "undefined" ? "undefined" : _typeof(a)) {case "number":
+	        return a;case "string":
+	        return parseFloat(a) / 100;}
+	  }function e(a) {
+	    var b;return b = a === window ? window.innerHeight || document.documentElement.clientHeight : a.clientHeight;
+	  }function f(a, b, c, f, g) {
+	    var h;switch (h = void 0 !== g ? g : a, void 0 !== c && (a = c), typeof b === "undefined" ? "undefined" : _typeof(b)) {case "number":
+	        var i = b;break;case "string":
+	        var j = d(b),
+	            i = e(a) * j;}if (void 0 !== f) switch (typeof f === "undefined" ? "undefined" : _typeof(f)) {case "number":
+	        i += f;break;case "string":
+	        var k = d(f);i += e(h) * k;}return i;
+	  }function g(a, b, c) {
+	    var d;if (b) {
+	      if (b.indexOf) return b.indexOf.call(b, a, c);for (d = b.length, c = c ? 0 > c ? Math.max(0, d + c) : c : 0; d > c; c++) {
+	        if (c in b && b[c] === a) return c;
+	      }
+	    }return -1;
+	  }function h(a, b, c) {
+	    return a.addEventListener ? (a.addEventListener(b, c, !1), !0) : a.attachEvent ? a.attachEvent("on" + b, c) : (b = "on" + b, "function" == typeof a[b] && (c = function (a, b) {
+	      return function () {
+	        a.apply(this, arguments), b.apply(this, arguments);
+	      };
+	    }(a[b], c)), a[b] = c, !0);
+	  }function i() {
+	    var a, b;switch (_typeof(l.scrollYOffset)) {case "number":
+	        a = l.scrollYOffset;break;case "string":
+	        b = d(k.settings.scrollYOffset), a = e(k.element) * b;}return a;
+	  }function j(a, b) {
+	    var c, d;return a === window ? (d = document.body.scrollTop || document.documentElement.scrollTop || window.pageYOffset, c = d + b) : c = a.scrollTop + b, isNaN(c) === !0 && (c = 0), c;
+	  }var k,
+	      l = { namespace: "scrollIntent", scrollYOffset: 0, scrollThreshold: 250, callbacksPerActions: void 0, resetCallbacksPerActionOnDirectionChange: !0, resetDurationOnDirectionChange: !1, developerIndicators: !1 },
+	      m = void 0,
+	      n = void 0,
+	      o = [];return ScrollIntent = function ScrollIntent(b, c, d) {
+	    k = this, k.element = b, k.actions = c, k.initComplete = function () {}, k.scrolling = function () {}, k.scrollingStopped = function () {}, c instanceof Array || (k.actions = [c]), k.settings = a(l, d), k.numberOfActions = void 0 === k.actions.length ? 1 : k.actions.length, k.scrollY = void 0, k.scrollYPrev = void 0, k.isScrolling = !1, k.direction = void 0, k.scrollYStart = 0, k.scrollAmount = 0, k.keyPressesPerEvent = 0, k.init();
+	  }, ScrollIntent.prototype.init = function () {
+	    var a = this;return a.computedScrollYOffset = i(), a.scrollY = j(a.element, a.computedScrollYOffset), a.setUpActions(), a.setupDeveloperIndicators(!0, !0), a.element.onscroll = function () {
+	      a.scrollY = j(a.element, a.computedScrollYOffset), a.isScrolling === !1 && (a.isScrolling = !0, a.scrollYStart = a.scrollYPrev, a.startTime = +new Date(), void 0 === a.scrollMethod && (a.scrollMethod = "scrollbar"), a.scrollCheckTimer = setInterval(function () {
+	        a.scrollY === a.scrollYPrev ? a.stopScrollCheck() : a.whenScrolling(), a.scrollYPrev = a.scrollY;
+	      }, a.settings.scrollThreshold));
+	    }, h(a.element, "mousewheel", function () {
+	      a.scrollMethod = "mousewheel";
+	    }), h(a.element, "DOMMouseScroll", function () {
+	      a.scrollMethod = "mousewheel";
+	    }), h(window, "onmousewheel", function () {
+	      a.scrollMethod = "mousewheel";
+	    }), h(a.element, "mousedown", function () {
+	      a.mousedown = !0;
+	    }), h(a.element, "mouseup", function () {
+	      a.mousedown = !1;
+	    }), h(a.element, "keydown", function (c) {
+	      c = c || window.event;var d = c.charCode || c.keyCode;a.scrollMethod = b(d), a.keyPressesPerEvent++;
+	    }), window.onresize = function () {
+	      this.resizeTO && clearTimeout(this.resizeTO), this.resizeTO = setTimeout(function () {
+	        c(function () {
+	          for (var b = 0; b < a.numberOfActions; b++) {
+	            var c = a.actions[b];c.computedWaypoint = f(a.element, c.waypoint, c.waypointRelativeTo, c.waypointOffset, c.waypointOffsetRelativeTo);
+	          }a.computedScrollYOffset = i(), a.setupDeveloperIndicators(!0, !0);
+	        });
+	      }, 200);
+	    }, a.initComplete(a), !1;
+	  }, ScrollIntent.prototype.destroy = function () {
+	    return !1;
+	  }, ScrollIntent.prototype.checkConditions = function () {
+	    for (var a = this, b = 0; b < a.numberOfActions; b++) {
+	      var c = a.actions[b];c.computedWaypoint !== c.previousComputedWaypoint && (c.noOfWaypointsTriggered = 0), a.nowTime = +new Date(), a.currentScrollDuration = a.nowTime - a.startTime, void 0 !== c.computedWaypoint && (a.scrollY > c.computedWaypoint ? (c.waypointPassed = c.afterWaypoint === !1 ? !0 : !1, c.afterWaypoint = !0) : (c.waypointPassed = c.afterWaypoint === !0 ? !0 : !1, c.afterWaypoint = !1)), void 0 !== c.direction && a.direction !== c.direction || void 0 !== c.callbacksPerAction && c.noOfCallbacksTriggered > c.callbacksPerAction || void 0 !== c.minSpeed && a.scrollAmount <= c.minSpeed || void 0 !== c.maxSpeed && a.scrollAmount > c.maxSpeed || void 0 !== c.computedWaypoint && (c.waypointPassed === !1 || 0 === a.scrollAmount && "scrollbar" === a.scrollMethod) || void 0 !== c.minWaypoint && a.scrollY < c.minWaypoint || void 0 !== c.maxWaypoint && a.scrollY > c.maxWaypoint || void 0 !== c.scrollMethod && -1 === g(a.scrollMethod, c.scrollMethod) || void 0 !== c.keyPressesPerEvent && a.keyPressesPerEvent !== c.keyPressesPerEvent || void 0 !== c.minDuration && a.currentScrollDuration < c.minDuration || void 0 !== c.maxDuration && a.currentScrollDuration > c.maxDuration || void 0 !== c.custom && c.custom(a) !== !0 || (c.previousComputedWaypoint = c.computedWaypoint, c.callback(a), c.noOfCallbacksTriggered++, c.noOfWaypointsTriggered = 1, c.computedWaypoint = f(a.element, c.waypoint, c.waypointRelativeTo, c.waypointOffset, c.waypointOffsetRelativeTo), a.computedScrollYOffset = i(), a.setupDeveloperIndicators(!0, !0));
+	    }return !1;
+	  }, ScrollIntent.prototype.whenScrolling = function () {
+	    var a = this;if (a.newDirection = a.scrollY > a.scrollYPrev ? "down" : "up", void 0 !== a.scrollYPrev) {
+	      for (var b = 0; b < a.numberOfActions; b++) {
+	        var c = a.actions[b];c.computedWaypoint = f(a.element, c.waypoint, c.waypointRelativeTo, c.waypointOffset, c.waypointOffsetRelativeTo), a.computedScrollYOffset = i(), a.setupDeveloperIndicators(!0, !0);
+	      }if (a.direction !== a.newDirection) {
+	        if (a.settings.resetCallbacksPerActionOnDirectionChange === !0) {
+	          for (var b = 0; b < a.numberOfActions; b++) {
+	            a.actions[b].noOfCallbacksTriggered = 1, a.actions[b].noOfWaypointsTriggered = 0;
+	          }a.scrollYStart = a.scrollYPrev;
+	        }a.settings.resetDurationOnDirectionChange === !0 && (a.startTime = +new Date());
+	      }a.direction = a.newDirection, a.checkConditions(), a.scrollAmount = Math.round(Math.abs(a.scrollY - a.scrollYPrev));
+	    }return a.scrolling(a), !1;
+	  }, ScrollIntent.prototype.stopScrollCheck = function () {
+	    var a = this;clearInterval(a.scrollCheckTimer), a.isScrolling = !1, a.scrollAmount = 0, a.scrollMethod = void 0, a.keyPressesPerEvent = 0;for (var b = 0; b < a.numberOfActions; b++) {
+	      var c = a.actions[b];c.noOfCallbacksTriggered = 1, c.noOfWaypointsTriggered = 0;
+	    }return a.scrollingStopped(a), !1;
+	  }, ScrollIntent.prototype.setupDeveloperIndicators = function (a, b) {
+	    var c = this;if (l.developerIndicators === !0) {
+	      var d = "",
+	          e = "";if (void 0 !== m && m.parentNode.removeChild(m), a === !0) {
+	        if (0 !== o.length) for (var f = o.length, g = 0; f > g; g++) {
+	          o[g].parentNode.removeChild(o[g]);
+	        }for (var g = 0; g < c.numberOfActions; g++) {
+	          if (void 0 !== c.actions[g].computedWaypoint) {
+	            var h = g + 1;d += "." + l.namespace + "-waypoint" + h + "{position: absolute; z-index: 99999; top:" + c.actions[g].computedWaypoint + "px; border: red solid 2px; left: 0; right: 0;}." + c.settings.namespace + "-waypoint" + h + ':after{position: absolute; top: 0; text-align: center; width: 200px; height: 20px; content: "ScrollIntent: Waypoint ' + h + '"; background: black; background: rgba(0,0,0,.8); color: white; padding: 12px; left: 20px; border: none;}', o[g] = document.createElement("div"), o[g].className = c.settings.namespace + "-waypoint" + h + " " + c.settings.namespace + "-indicator", document.body.appendChild(o[g]);
+	          }
+	        }
+	      }b === !0 && (e = "." + c.settings.namespace + "-scrolly{position: fixed; z-index: 99999; top: " + c.computedScrollYOffset + "px; border: blue solid 2px; left: 0; right: 0;}", void 0 !== n && n.parentNode.removeChild(n), n = document.createElement("div"), n.className = c.settings.namespace + "-scrolly " + c.settings.namespace + "-indicator", document.body.appendChild(n)), m = document.createElement("style");var i = d + e;m.className = c.settings.namespace + "-indicator-styles", m.type = "text/css", m.styleSheet ? m.styleSheet.cssText = i : m.appendChild(document.createTextNode(i));var j = document.head || document.getElementsByTagName("head")[0];j.appendChild(m);
+	    }return !1;
+	  }, ScrollIntent.prototype.setUpActions = function () {
+	    for (var a = this, b = 0; b < a.numberOfActions; b++) {
+	      var c = a.actions[b];c.noOfCallbacksTriggered = 0, c.noOfWaypointsTriggered = 0, c.computedWaypoint = f(a.element, c.waypoint, c.waypointRelativeTo, c.waypointOffset, c.waypointOffsetRelativeTo), c.afterWaypoint = a.scrollY > c.computedWaypoint ? !0 : !1, void 0 === c.scrollMethod || c.scrollMethod instanceof Array || (c.scrollMethod = [c.scrollMethod]);
+	    }return !1;
+	  }, ScrollIntent;
+	}();
+
+	module.exports.init = function () {
+	  var Rx = __webpack_require__(2);
+
+	  var picasso = __webpack_require__(1);
+
+	  var PLAY_SPEED = 10;
+
+	  var isPlaying = false;
+	  var isPlayingInterval;
+	  var bodyHeight = $('body').height();
+	  var na = 0;
+
+	  var keyUpPressed = Rx.Observable.fromEvent(document, 'keyup', function (e) {
+	    e.preventDefault();
+	    return e;
+	  });
+
+	  var backKey = keyUpPressed.filter(function (e) {
+	    return e.keyCode === 38;
+	  });
+	  var nextKey = keyUpPressed.filter(function (e) {
+	    return e.keyCode === 40;
+	  });
+
+	  var toggleUpClicked = Rx.Observable.fromEvent($("#toggleUp"), 'click');
+	  var toggleDownClicked = Rx.Observable.fromEvent($("#toggleDown"), 'click');
+
+	  Rx.Observable.merge(nextKey, toggleDownClicked).subscribe(function (e) {
+	    console.log('NEXT');
+	    picasso.action('next');
+	  });
+
+	  Rx.Observable.merge(backKey, toggleUpClicked).subscribe(function (e) {
+	    console.log('PREVIOUS');
+	    picasso.action('previous');
+	  });
+
+	  $("#togglePlay").on('click', function (e) {
+	    console.log("CLICK");
+	    if (isPlaying) {
+	      pause();
+	    } else {
+	      play();
+	    }
+	  });
+
+	  keyUpPressed.filter(function (e) {
+	    return e.keyCode === 80 || e.keyCode === 32;
+	  }).subscribe(function (e) {
+	    if (isPlaying) {
+	      pause();
+	    } else {
+	      play();
+	    }
+	  });
+
+	  function play() {
+	    console.log("PLAY");
+	    isPlayingInterval = setInterval(function () {
+	      picasso.action('next');
+	    }, 5000);
+	    $("#togglePlay").removeClass('fa-play').addClass('fa-pause');
+	    isPlaying = true;
+	  }
+
+	  function pause() {
+	    console.log("PAUSE");
+	    clearInterval(isPlayingInterval);
+	    isPlaying = false;
+	    $("#togglePlay").removeClass('fa-pause').addClass('fa-play');
+	  }
+	};
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	// NOTE: This file relies heavily on webpack for requires of html and json config files.
+
+	// Constants
+	var SCENE_INDEX = __webpack_require__(12);
+	var SCENE_CONTAINER_CSS_CLASS = 'wrapper';
+
+	/*
+	 * Generates an HTML string from scene.html files the scenes folder.
+	 * Creates a wrapper div that provides feedback.
+	 */
+	module.exports.renderHTML = function () {
+
+	  return SCENE_INDEX.map(function (scene) {
+	    return scene.id;
+	  }).map(function (sceneName) {
+	    return {
+	      html: __webpack_require__(13)("./" + sceneName + "/scene.html"),
+	      name: sceneName
+	    };
+	  }).map(function (sceneObject) {
+	    // Create wrapper div for html
+	    var $wrapper = document.createElement('div');
+	    $wrapper.classList.add(SCENE_CONTAINER_CSS_CLASS);
+	    $wrapper.setAttribute('id', sceneObject.name);
+	    $wrapper.innerHTML = sceneObject.html;
+	    return $wrapper.outerHTML;
+	  }).reduce(function (prev, next) {
+	    // Concat to 1 html string
+	    return prev + next;
+	  }, '');
+	};
+
+	module.exports.getScenes = function () {
+
+	  return SCENE_INDEX.map(function (scene) {
+	    return scene.id;
+	  }).map(function (sceneName) {
+	    // get the scenes(which are in arrays)
+	    return __webpack_require__(45)("./" + sceneName + "/scene.json");
+	  }).reduce(function (prev, current) {
+	    // flatten arrays by concating into a new array
+	    return prev.concat(current);
+	  }, []);
+	};
+
+	module.exports.getAudioConfig = function () {
+
+	  return SCENE_INDEX.map(function (scene) {
+	    return scene;
+	  });
+	};
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"id": "intro",
+			"audio": {
+				"src": "1",
+				"max": 0.01
+			}
+		},
+		{
+			"id": "doyoufeelmuslim",
+			"audio": {
+				"src": "1",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "aboutyourself",
+			"audio": {
+				"src": "1",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "reactionstoterror",
+			"audio": {
+				"src": "2",
+				"max": 0.3
+			}
+		},
+		{
+			"id": "feelingconfused",
+			"audio": {
+				"src": "3",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "outtogetyou",
+			"audio": {
+				"src": "3",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "somethingtoprove",
+			"audio": {
+				"src": "4",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "itisnteasy",
+			"audio": {
+				"src": "5",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "mixedfeelings",
+			"audio": {
+				"src": "6",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "differentpractices",
+			"audio": {
+				"src": "6",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "yetthatsokay",
+			"audio": {
+				"src": "6",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "itsgottoend",
+			"audio": {
+				"src": "7",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "iwantmyislamback1",
+			"audio": {
+				"src": "7",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "whoarethey",
+			"audio": {
+				"src": "7",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "isisfightmisquote",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "isisapocalypsemisquote",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "isisafterlifefallacy",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "whatislamichistoryprefers",
+			"audio": {
+				"src": "10",
+				"max": 0.2
+			}
+		},
+		{
+			"id": "isisbankrupt",
+			"audio": {
+				"src": "10",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "isiswantstodivide",
+			"audio": {
+				"src": "7",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "complicatedsituation",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "battleofageneration",
+			"audio": {
+				"src": "9",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "muslimsbelieveindividuallife",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "wewillprotecteachother",
+			"audio": {
+				"src": "9",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "wearenotafraid",
+			"audio": {
+				"src": "8",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "wearecoming",
+			"audio": {
+				"src": "9",
+				"max": 0.5
+			}
+		},
+		{
+			"id": "likepeace",
+			"audio": {
+				"src": "9",
+				"max": 0.01
+			}
+		}
+	];
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var map = {
+		"./aboutyourself/scene.html": 14,
+		"./battleofageneration/scene.html": 15,
+		"./complicatedsituation/scene.html": 16,
+		"./differentpractices/scene.html": 17,
+		"./doyoufeelmuslim/scene.html": 18,
+		"./explosion/scene.html": 19,
+		"./feelingconfused/scene.html": 20,
+		"./intro/scene.html": 21,
+		"./isisafterlifefallacy/scene.html": 22,
+		"./isisapocalypsemisquote/scene.html": 23,
+		"./isisbankrupt/scene.html": 24,
+		"./isisfightmisquote/scene.html": 25,
+		"./isisobjective/scene.html": 26,
+		"./isiswantstodivide/scene.html": 27,
+		"./itisnteasy/scene.html": 28,
+		"./itsgottoend/scene.html": 29,
+		"./iwantmyislamback1/scene.html": 30,
+		"./likepeace/scene.html": 31,
+		"./mixedfeelings/scene.html": 32,
+		"./muslimsbelieveindividuallife/scene.html": 33,
+		"./outtogetyou/scene.html": 34,
+		"./reactionstoterror/scene.html": 35,
+		"./somethingtoprove/scene.html": 36,
+		"./wearecoming/scene.html": 37,
+		"./wearenotafraid/scene.html": 38,
+		"./wewillprotecteachother/scene.html": 39,
+		"./whatislamichistoryprefers/scene.html": 40,
+		"./whatthequranprefers/scene.html": 41,
+		"./whoarethey/scene.html": 42,
+		"./withallthehatred/scene.html": 43,
+		"./yetthatsokay/scene.html": 44
+	};
+	function webpackContext(req) {
+		return __webpack_require__(webpackContextResolve(req));
+	};
+	function webpackContextResolve(req) {
+		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
+	};
+	webpackContext.keys = function webpackContextKeys() {
+		return Object.keys(map);
+	};
+	webpackContext.resolve = webpackContextResolve;
+	module.exports = webpackContext;
+	webpackContext.id = 13;
+
+
+/***/ },
+/* 14 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n.about-yourself {\n    opacity: 0;\n}\n</style>\n\n<div class=\"about-yourself\">\n  <div class=\"table\">\n    <div class=\"table-center\">\n      <div class=\"display-4 text-centered\">How do you feel about yourself?</div>\n    </div>\n  </div>\n</div>";
+
+/***/ },
+/* 15 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"battle-of-a-generation grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">...but we must begin our fight for this generation.</div>\n  \t\t</div>\n\t</div>\n</div>";
+
+/***/ },
+/* 16 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<style>\n  .left, .right {\n    float: left;\n  }\n  .table {\n    position: relative;\n  }\n  .too-long-quote {\n    position: fixed;\n    top: 0;\n    left: 0;\n    font-size: 2.5vmax;\n    text-align: center;\n    color: rgba(255,255,255,0.3);\n    width: 100%;\n    height: 100%;\n    overflow: hidden;\n    /*background: #333;*/\n    padding-top: 4vmax;\n    -webkit-filter: blur(2px);\n  }\n  .text-centered {\n    text-align: center;\n  }\n  .onTop {\n    z-index: 20000;\n  }\n</style>\n\n<div class=\"grey-zone\">\n  <div class=\"too-long-quote\">\n    <strong>The failure</strong> of the postcolonial elites to <strong>create genuine democratic societies</strong> and foster a sense of national unity <strong>opting instead for military dictatorships</strong> that <strong>eroded the potential for economic and political development</strong> coupled with the historic mistakes of Arabic progressive parties and their <strong>appeasement towards autocratic rulers</strong> contributing to the <strong>complete evisceration of alternative political frameworks</strong> that could create organic resistance towards external meddling, hegemony and outright military interventions leaving a <strong>radical interpretation of religion as the only remaining ideological platform capable of mobilising the disenfranchised</strong> exacerbated by the global decline of universal ideals and the <strong>rise of identity as a prime mobiliser</strong> and enabled by political and <strong>financial support from theocratic regimes</strong> aiming to shore up their legitimacy and made worse by the <strong>collapse of the regional security</strong> order creating the conditions for <strong>proxy wars</strong> and political, social and economic upheaval intensified by geo-politically <strong>incoherent international meddling</strong> escalating conflicts and leading to a <strong>perpetual state of chaos</strong> under which the appeal of a revivalist religious-political order embodied by the <strong>caliphate becomes attractive</strong> particularly when coupled with a millenarian apocalyptic narrative.\n  </div>\n  <div class=\"table onTop \">\n    <div class=\"table-center\">\n      <div class=\"display-4 text-centered\">The situation may be complicated...</div>\n    </div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 17 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">No one has the complete answer, and we all have different ways of practicing Islam.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 18 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  #doyoufeelmuslim .anim-2 {\n    opacity: 0;\n  }\n  .video-background video {\n    width: 100vw;\n  }\n  .video-background {\n    position: fixed;\n    top: 0;\n    left: 0;\n  }\n  #doyoufeelmuslim .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n  }\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"0.17\" >\n    <source src=\"img/terrorist-attacks.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\">How do you feel about your Islam?</div><br /><br />\n  </div>\n</div>\n";
+
+/***/ },
+/* 19 */
+/***/ function(module, exports) {
+
+	module.exports = "<p class=\"explosion-byline\">Here's an example of 16 elements scaling, fading and moving at once.</p>\n<ul id=\"domExplosionList\">\n  <li class=\"dom-explosion-item dei-1\"></li>\n  <li class=\"dom-explosion-item dei-2\"></li>\n  <li class=\"dom-explosion-item dei-3\"></li>\n  <li class=\"dom-explosion-item dei-4\"></li>\n  <li class=\"dom-explosion-item dei-5\"></li>\n  <li class=\"dom-explosion-item dei-6\"></li>\n  <li class=\"dom-explosion-item dei-7\"></li>\n  <li class=\"dom-explosion-item dei-8\"></li>\n  <li class=\"dom-explosion-item dei-9\"></li>\n  <li class=\"dom-explosion-item dei-10\"></li>\n  <li class=\"dom-explosion-item dei-11\"></li>\n  <li class=\"dom-explosion-item dei-12\"></li>\n  <li class=\"dom-explosion-item dei-13\"></li>\n  <li class=\"dom-explosion-item dei-14\"></li>\n  <li class=\"dom-explosion-item dei-15\"></li>\n  <li class=\"dom-explosion-item dei-16\"></li>\n</ul>\n";
+
+/***/ },
+/* 20 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n.us-against-them {\n    opacity: 0;\n}\n</style>\n\n<div class=\"us-against-them\">\n\t<div class=\"table\">\n\t  <div class=\"table-center\">\n\t    <div class=\"display-4 text-centered\">Feels like it's us against them...</div>\n\t  </div>\n\t</div>\n</div>";
+
+/***/ },
+/* 21 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n/*#intro {\n  position: fixed;\n  top: 15vh;\n  left: 10%;\n  width: 80%;\n  color: #fff;\n  text-align: center;\n  text-transform: uppercase;\n}*/\n</style>\n<div class=\"intro\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-1 text-centered\">For the best user experience, please plug in headphones.<br></br>\n    \t\tThis is an interactive experience. All sources and quotes are real links.<br></br>\n    \t\tScroll or press the 'down' key to begin.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
+
+/***/ },
+/* 22 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  .table input {\n    font-size: 6.5vw;\n    width: 5vw;\n    background: black;\n    border: none;\n    color: white;\n    font-weight: bold;\n  }\n  .left-align .quran-read {\n    text-align: left;\n  }\n  .calculator {\n    background: black;\n    width: 50vw;\n    margin: 0 auto;\n    padding: 2vw;\n    opacity: 0;\n  }\n  #isisafterlifefallacy .quote {\n    font-style: italic;\n  }\n  .equals {\n    width: 95%;\n    float: right;\n    border: 0.2vw solid\n  }\n  .text-right {\n    text-align: right;\n  }\n  .text-bold {\n    font-weight: 700;\n  }\n</style>\n\n<div class=\"table\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <div class=\"display-2 premise text-bold\">ISIS may kill innocent people indiscriminately...</div><br><br>\n    <div class=\"display-2 conclusion text-bold\">Have they even imagined how haram (sinful) that is?</div>\n    <div class=\"display-1 emphasis conclusion\"><a href=\"http://quran.com/5/32\" target=\"_blank\"><strong>...whoever kills a soul ... it is as if he had slain mankind entirely.</strong></div><span class=\"quote-source conclusion\">Qur'an 5:32</span></a>\n  </div>\n  <div class=\"table-center\" style=\"width:50\">\n    <div class=\"display-3 text-right calculator\">\n      If you've murdered <input type=\"number\" id=\"murdernumber\" value=\"1\" min=\"1\" size=\"2\" /></strong>\n      <br > * <span>7 billion people</span><br >\n      <hr class=\"equals\">\n      The weight of murdering <br> <strong><span id=\"murdertotal\"></span> people.</strong></div>\n  </div>\n</div>\n\n<!-- TODO: Move to a new script. -->\n\n<script>\n  $(function() {\n\n    var POPULATION_TOTAL = 7000000000;\n\n    // initialiaze\n    updateMurderCalculator();\n\n    $(\"#murdernumber\").on('change', function() {\n      updateMurderCalculator()\n    });\n\n    $(\"#murdernumber\").on('scroll', function() {\n      console.log('blur')\n      $(this).blur();\n    });\n\n    function updateMurderCalculator() {\n      var murdernumber = $(\"#murdernumber\").val();\n      var murderTotal  = murdernumber * POPULATION_TOTAL;\n      render(murderTotal);\n    }\n\n    function render(murderTotal) {\n      $('#murdertotal').html(murderTotal);\n    }\n\n  });\n</script>\n";
+
+/***/ },
+/* 23 */
+/***/ function(module, exports) {
+
+	module.exports = "  <div class=\"table\">\n    <div class=\"table-center\" style=\"width:50%\">\n      <h1 class=\"premise\">ISIS may believe the Apocalypse is near....</h1><br /><br />\n      <h1 class=\"conclusion\">Have they consulted the Qur’an on this matter?</h1>\n    </div>\n    <div class=\"table-center\" style=\"width:50\">\n      <h2 class=\"quran-read quran-hidden\">\n        <a href=\"http://quran.com/7/187\" target=\"_blank\">They ask thee of the (destined) Hour, when will it come to port. Say: <strong>Knowledge thereof is with my Lord only. He alone will manifest it at its proper time...</strong><span class=\"quote-source\">Qur'an 7:187</span></a><br><br>\n         <a href=\"http://quran.com/41/47\" target=\"_blank\"><strong>To Him [alone]</strong> is attributed  <strong>knowledge of the Hour.</strong><span class=\"quote-source\">Quran 41:47</span></a>\n      </h2>\n    </div>\n  </div>\n";
+
+/***/ },
+/* 24 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  .left {\n    width: 40vw;\n  }\n\n  .newssource-hor,\n  greyzone-src {\n    max-height: 40vh;\n    box-shadow: 0 1vw 2vw rgba(0, 0, 0, 0.6);\n  }\n\n  .newssources-hor {\n    position: absolute;\n    top: 35vh;\n    width: 230vw;\n    height: 50vh;\n    /*overflow: hidden;*/\n    transform: translateX(250%);\n  }\n\n  .black-zone {\n    background: black;\n    width: 100vw;\n    height: 100vh;\n  }\n/*  #itisnteasy .display-4 {\n    opacity: 0;\n  }*/\n   .dropdead {\n    width: 50vw;\n  }\n  .cunning1 {\n    top: 4vh;\n    right: 6vw;\n  }\n  .cunning2 {\n    top: 40vh;\n    right: 3vw;\n  }\n  .cunning3 {\n    bottom: 4vh;\n    right: 5vw;\n  }\n  .cunning4 {\n    bottom: 5vh;\n    right: 39vw;\n  }\n  .cunning5 {\n    bottom: 2vh;\n    left: 4vw;\n  }\n  .cunning6 {\n    bottom: 30vh;\n    right: 20vw;\n  }\n\n</style>\n<div class=\"grey-zone table\">\n  <div class=\"black-zone table-center\">\n  <div class=\"display-4\" style=\"width:50%\">\n  ISIS is bankrupt as an ideology...\n  <br>\n  <br>\n  <span class=\"conclusion\">but they are cunning with strategy.</span>\n  </div>\n  <div class=\"newsources\">\n    <a target=\"_blank\" class=\"cunning1\" href=\"http://www.nytimes.com/2015/06/13/world/middleeast/isis-is-winning-message-war-us-concludes.html?_r=0\">\n        <img class=\"newssource-hor\" src=\"./img/isis-strategy-social.png\">\n      </a>\n    <a target=\"_blank\" class=\"cunning2\" href=\"http://money.cnn.com/2015/12/06/news/isis-funding/\">\n        <img class=\"newssource-hor\" src=\"./img/isis-strategy-billions.png\">\n      </a>\n    <a target=\"_blank\" class=\"cunning3\" href=\"http://money.cnn.com/2015/12/06/news/isis-funding/\">\n        <img class=\"newssource-hor\" src=\"./img/isis-strategy-flow.png\">\n      </a>\n    <a target=\"_blank\" class=\"cunning4\" href=\"http://www.washingtontimes.com/news/2016/jan/27/islamic-states-cyber-arm-seeks-revenge-hackers-dea/\">\n        <img class=\"newssource-hor\" src=\"./img/isis-strategy-hackers.png\">\n      </a>\n    <a target=\"_blank\" class=\"cunning5\" href=\"http://www.theatlantic.com/international/archive/2015/10/war-isis-us-coalition/410044/\">\n        <img class=\"newssource-hor\" src=\"./img/isis-strategy-humanity.png\">\n      </a>\n   <a target=\"_blank\" class=\"cunning6\" href=\"https://www.opendemocracy.net/nafeez-ahmed/isis-wants-destroy-greyzone-how-we-defend\">\n        <img class=\"newssource-hor greyzone-src\" src=\"./img/isis-strategy-greyzone.png\">\n      </a>\n  </div>\n</div>\n</div>\n";
+
+/***/ },
+/* 25 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  #isisfightmisquote .premise,\n  #isisfightmisquote .conclusion\n   {\n     position: absolute;\n     width: 40vw;\n     bottom: 40vh;\n     opacity: 0;\n   }\n   #makewhite{\n    font-color:white;\n   }\n\n</style>\n<div class=\"table\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <h1 class=\"premise\">ISIS may quote the Qur'an...</h1>\n    <h1 class=\"conclusion\">But does ISIS read the Qur'an?</h1>\n  </div>\n  <div class=\"table-center\" style=\"width:50\">\n    <h2 class=\"quran-read\">\n      <a href=\"http://quran.com/2/190\" target=\"_blank\"><span class=\"quran-hidden\">Fight in the cause of Allah <strong>against those who fight you</strong>, and <strong>do not commit aggression.</strong> <span class=\"quote-source\">Quran 2:190</span><br><br></span></a>\n      <a href=\"http://quran.com/2/191\" target=\"_blank\">Kill them, wherever you may find them!<span class=\"quote-source\">Qur'an 2:191</span><br><br></a>\n      <a href=\"http://quran.com/2/193\" target=\"_blank\"><span class=\"quran-hidden\">...if they cease, <strong>let there be no hostility except against oppressors</strong>. <span class=\"quote-source\">Quran 2:193</span></span></a>\n    </h2>\n  </div>\n</div>\n";
+
+/***/ },
+/* 26 */
+/***/ function(module, exports) {
+
+	module.exports = "They has a simple objective they’ve stated.\n";
+
+/***/ },
+/* 27 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  #isiswantstodivide .anim-2 {\n    opacity: 0;\n  }\n\n  #isiswantstodivide .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n  }\n  .color-zone {\n    position: absolute;\n    width: 100vw;\n    height: 100vh;\n  }\n  .zones {\n    height: 100vh;\n  }\n  .violent-zones {\n    width: 10vw;\n    position: relative;\n    z-index: 2;\n  }\n  .grey-zone {\n    background: #747B81\n  }\n  .white-zone {\n    background: white;\n    float:left;\n  }\n  .black-zone {\n    background: black;\n    float:right;\n  }\n  #isiswantstodivide .display-4{\n    position: relative;\n    z-index: 3;\n  }\n</style>\n<div class=\"color-zone\">\n  <div class=\"zones black-zone violent-zones\"></div>\n  <div class=\"zones white-zone violent-zones\"></div>\n</div>\n<div class=\"table grey-zone\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-2\">They want to divide us all,</div><br />\n    <div class=\"display-4 anim-2\">destroy the grey zone of coexistence,</div><br />\n    <div class=\"display-4 anim-2\">and start another great war.</div><br /><br />\n    <div class=\"display-4 anim-1\">We won't let that happen.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 28 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  .left {\n    width: 40vw;\n  }\n  .newssource {\n    max-height: 40vh;\n    display: block;\n    box-shadow: 0 1vw 2vw rgba(0,0,0,0.6);\n    margin-bottom: 5vh;\n  }\n  .newsources {\n    position: absolute;\n    width: 100vw;\n    height: 100vh;\n    top: 0;\n    left: 0;\n    /*overflow: hidden;*/\n    /*transform: translateY(80%);*/\n  }\n  .newsources a {\n    max-width: 40vw;\n    position: absolute;\n    opacity: 0;\n  }\n/*  #itisnteasy .display-4 {\n    opacity: 0;\n  }*/\n  .isnteasy_1 {\n    top: 8vh;\n    right: 5vw;\n  }\n   .isnteasy_2 {\n    top: 28vh;\n    right: 5vw;\n  }\n  .isnteasy_3 {\n    top: 45vh;\n    right: 5vw;\n  }\n  .isnteasy_4 {\n    top: 60vh;\n    right: 5vw;\n  }\n  .isnteasy_5 {\n    top: 60vh;\n    right: 20vw;\n  }\n  .isnteasy_6 {\n    top: 65vh;\n    right: 32vw;\n  }\n  .isnteasy_7 {\n    top: 62vh;\n    right: 50vw;\n  }\n  .isnteasy_8 {\n    top: 66vh;\n    right: 65vw;\n  }\n   .isnteasy_9 {\n    top: 5vh;\n    right: 65vw;\n  }\n   .isnteasy_10 {\n    top: 3vh;\n    right: 50vw;\n  }\n   .isnteasy_11 {\n    top: 9vh;\n    right: 38vw;\n  }\n   .isnteasy_12 {\n    top: 5vh;\n    right: 20vw;\n  }\n   .isnteasy_13 {\n    top: 35vh;\n    right: 28vw;\n  }\n</style>\n<div class=\"table\">\n  <div class=\"table-center\">\n  <div class=\"display-4 left\">It isn’t easy being Muslim anywhere… </div>\n  <div class=\"newsources\">\n    <a target=\"_blank\" class=\"isnteasy_1\" href=\"http://content.time.com/time/covers/0,16641,20100830,00.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-america.jpg\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_2\" href=\"http://america.aljazeera.com/articles/2015/12/9/us-muslims-experience-surge-in-islamophobic-attacks.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-america2.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_3\" href=\"http://www.inquisitr.com/2610717/hate-crime-string-of-anti-muslim-attacks-hit-canada.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-canada.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_4\" href=\"http://america.aljazeera.com/articles/2015/2/17/threats-to-muslim-american-community-intensifies-after-chapel-hill-shooting.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-chapelhill.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_5\" href=\"http://www.telegraph.co.uk/news/worldnews/europe/france/12075018/Hate-crimes-against-Muslims-and-Jews-soar-in-France.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-france.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_6\" href=\"https://www.washingtonpost.com/world/europe/religious-liberties-under-strain-for-muslims-in-france/2015/11/22/83054c06-912f-11e5-befa-99ceebcbb272_story.html\">\n      <img class=\"newssource\" src=\"./img/hatecrime-france2.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_7\" href=\"http://losangeles.cbslocal.com/2015/12/13/2-mosques-in-hawthorne-vandalized-with-graffiti/\">\n      <img class=\"newssource\" src=\"./img/hatecrime-grenadegraffiti.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_8\" href=\"http://ktla.com/2015/12/11/possible-hate-crime-investigated-after-man-pulls-out-knife-on-muslim-woman-in-chino-hills-sheriffs-department/\">\n      <img class=\"newssource\" src=\"./img/hatecrime-knife.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_9\" href=\"http://www.cnn.com/2015/12/12/us/california-mosque-fire/\">\n      <img class=\"newssource\" src=\"./img/hatecrime-mosquefire.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_10\" href=\"http://www.foxnews.com/transcript/2014/10/07/bill-oreilly-islam-destructive-force-world/\">\n      <img class=\"newssource\" src=\"./img/hatecrime-oreilly.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_11\" href=\"http://www.nydailynews.com/news/national/muslim-ga-girl-class-gasped-teacher-bomb-joke-article-1.2463495\">\n      <img class=\"newssource hidesource\" src=\"./img/hatecrime-studentbackpack.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_12\" href=\"http://time.com/4139476/donald-trump-shutdown-muslim-immigration/\">\n      <img class=\"newssource hidesource\" src=\"./img/hatecrime-trump.png\" >\n    </a>\n    <a target=\"_blank\" class=\"isnteasy_13\" href=\"https://today.yougov.com/news/2015/12/11/two-thirds-republicans-back-trump-proposal/\">\n      <img class=\"newssource trump\" src=\"./img/hatecrime-poll.png\" >\n    </a>\n  </div>\n</div>\n</div>\n";
+
+/***/ },
+/* 29 */
+/***/ function(module, exports) {
+
+	module.exports = "\n\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-3 text-centered\">While we may not <span id=\"agree\">agree</span> on everything,</div>\n    <div class=\"display-3 text-centered\">we can agree on one thing:</div>\n    <div class=\"display-4 text-bold text-centered\">ISIS is <span style=\"color:#AB2E2E\" id=\"murder\">murdering</span> Islam's name</div>\n  </div>\n</div>\n\n\n<!--\nView of ISIS Overwhelmingly Negative (Pew bar graph)\nhttp://www.pewresearch.org/fact-tank/2015/11/17/in-nations-with-significant-muslim-populations-much-disdain-for-isis/ft_15-11-17_isis_views/\n -->\n";
+
+/***/ },
+/* 30 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">AND THAT’S GOT TO END.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 31 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n\n.first,.second, .third, .fourth {\n\topacity: 0\n}\n#likepeace .display-4 {\n\topacity: 1!important;\n\ttransform: translateY(30%);\n}\n\n\n#likepeace input {\n\tfont-size: 3vmin;\n\tbackground: #747B81;\n\tcolor: white;\n\tpadding: 2%;\n\twidth: auto;\n\tmargin: 0.5vmin 0;\n\twidth: 96%;\n}\n\n#likepeace label {\n\tcolor: #747B81;\n}\n\n#likepeace input[type=submit] {\n\tcolor: white;\n\tbackground: #3CA2CD;\n\twidth: auto;\n\tmargin-top: 2vmin;\n\tcursor: pointer;\n}\n\n#likepeace label {\n\tdisplay: block;\n\tmargin: 0.2vmin 0.5vmin;\n\ttext-transform: uppercase;\n\tfont-weight: bold;\n\tfont-size: 2.5vmin;\n}\n\n#likepeace #mc_embed_signup {\n\twidth: 50vmax;\n\tbackground: white;\n\tmargin: 0 auto;\n\tpadding: 2vmin;\n}\n\n#likepeace h2 {\n\tcolor: black;\n\tmargin-bottom: 2vmin\n}\n</style>\n<div class=\"table grey-zone\">\n\t\t<div class=\"table-center\">\n  \t\t<div class=\"display-4 text-centered\"><span class=\"first\">MUSLIMS</span> <span class=\"second\">AGAINST</span> <span class=\"third\">ISIS</span></div>\n\t\t\t<div class=\"fourth\">\n\n\t\t\t\t<!-- Begin MailChimp Signup Form -->\n\t\t\t\t<div id=\"mc_embed_signup\">\n\t\t\t\t<form action=\"//muslimsagainstisis.us12.list-manage.com/subscribe/post?u=9d2dd81ccb07b710593475421&amp;id=81a5f5250c\" method=\"post\" id=\"mc-embedded-subscribe-form\" name=\"mc-embedded-subscribe-form\" class=\"validate\" target=\"_blank\" novalidate>\n\t\t\t\t    <div id=\"mc_embed_signup_scroll\">\n\t\t\t\t\t<h2>Updates Soon. Subscribe Now.</h2>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-EMAIL\">Email Address </label>\n\t\t\t\t\t<input type=\"email\" value=\"\" name=\"EMAIL\" class=\"required email\" id=\"mce-EMAIL\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-FNAME\">First Name </label>\n\t\t\t\t\t<input type=\"text\" value=\"\" name=\"FNAME\" class=\"required\" id=\"mce-FNAME\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"mc-field-group\">\n\t\t\t\t\t<label for=\"mce-LNAME\">Last Name </label>\n\t\t\t\t\t<input type=\"text\" value=\"\" name=\"LNAME\" class=\"required\" id=\"mce-LNAME\">\n\t\t\t\t</div>\n\t\t\t\t\t<div id=\"mce-responses\" class=\"clear\">\n\t\t\t\t\t\t<div class=\"response\" id=\"mce-error-response\" style=\"display:none\"></div>\n\t\t\t\t\t\t<div class=\"response\" id=\"mce-success-response\" style=\"display:none\"></div>\n\t\t\t\t\t</div>    <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->\n\t\t\t\t    <div style=\"position: absolute; left: -5000px;\" aria-hidden=\"true\"><input type=\"text\" name=\"b_9d2dd81ccb07b710593475421_81a5f5250c\" tabindex=\"-1\" value=\"\"></div>\n\t\t\t\t    <div class=\"clear\"><input type=\"submit\" value=\"Subscribe\" name=\"subscribe\" id=\"mc-embedded-subscribe\" class=\"button\"><a href=\"https://twitter.com/share\" class=\"twitter-share-button\" data-url=\"http://www.muslimsagainstisis.com\" data-size=\"large\" data-hashtags=\"muslimsagainstisis\" data-dnt=\"true\">Tweet</a>\n<!-- <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script><a name=\"fb_share\" type=\"button\" share_url=\"http://www.muslimsagainstisis.com\" href=\"http:www.facebook.com/sharer.php\">Share</a><script src=\"http://static.ak.fbcdn.net/connect.php/js/FB.Share\" type=\"text/javascript\"></script></div> -->\n\t\t\t\t    </div>\n\t\t\t\t    <!-- <div class=\"fb-share-button\" data-href=\"https://www.muslimsagainstisis.com\" data-layout=\"icon\"></div> -->\n\t\t\t\t</form>\n\t\t\t\t</div>\n\t\t\t\t<!--End mc_embed_signup-->\n\t\t\t</div>\n\t\t</div>\n\t\t</div>\n\n</div>\n";
+
+/***/ },
+/* 32 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">And we may be having mixed feelings about the situation.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 33 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"muslims-believe-individual-life grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We are Muslims. Muslims that believe EVERY individual life is sacred.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
+
+/***/ },
+/* 34 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n.out-to-get-you {\n    opacity: 0;\n}\n</style>\n\n<div class=\"out-to-get-you\">\n\t<div class=\"table \">\n\t  <div class=\"table-center\">\n\t    <div class=\"display-4 text-centered\">...like everybody's out to get you...</div>\n\t  </div>\n\t</div>\n</div>";
+
+/***/ },
+/* 35 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  #reactionstoterror .display-4 {\n    background: black;\n    display: inline-block;\n    padding: 0.5vw;\n    /*position: absolute;*/\n    /*bottom: 5vh;*/\n\n  }\n  #reactionstoterror .anim-1 {\n    opacity: 0;\n  }\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"0.4\">\n    <source src=\"img/RevisedWork2.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n    <div class=\"table-center\">\n      <div class=\"display-4 anim-1\">How do you feel about how people react to the attacks?</div><br /><br />\n    </div>\n</div>\n";
+
+/***/ },
+/* 36 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n#something-to-prove .display-4 {\n    opacity: 0;\n}\n</style>\n<div class=\"something-to-prove\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">...like you have <strong>something to prove</strong>.</div>\n  \t\t</div>\n\t</div>\n</div>";
+
+/***/ },
+/* 37 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"we-are-coming grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We are coming.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
+
+/***/ },
+/* 38 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"we-are-not-afraid grey-zone\">\n\t<div class=\"table \">\n  \t\t<div class=\"table-center\">\n    \t\t<div class=\"display-4 text-centered\">We will do more. We will stop this false ideology. We are not afraid.</div>\n  \t\t</div>\n\t</div>\n</div>\n";
+
+/***/ },
+/* 39 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n.wewillprotecteachother {\n    opacity: 0;\n}\n#wewillprotecteachother img {\n  max-width: 35vw;\n}\n#wewillprotecteachother .conclusion,\n#wewillprotecteachother .premise {\n  opacity: 0;\n}\n</style>\n<div class=\"table grey-zone\">\n  <div class=\"table-center\" style=\"width:50%\">\n    <div class=\"premise\">\n      <div class=\"display-2\">We will protect every individual life.</div>\n      <a href=\"http://learningenglish.voanews.com/content/kenyan-muslims-protect-christians-from-terrorist-attack/3114326.html\" target=\"_blank\"><img src=\"./img/KenyaProtect2.png\"></a>\n    </div>\n  </div>\n  <div class=\"table-center\" style=\"width:45%\">\n    <h2 class=\"conclusion\">\n      <div class=\"display-2\">We will ask others to help protect ours.</div>\n      <a href=\"http://www.usatoday.com/story/news/nation-now/2015/12/22/iwillprotectyou-us-service-members-soothe-scared-muslim-girl/77748874/\" target=\"_blank\"><img src=\"./img/IWillProtectYou.png\"></a>\n    </h2>\n  </div>\n</div>\n";
+
+/***/ },
+/* 40 */
+/***/ function(module, exports) {
+
+	module.exports = "<style>\n  #doyoufeelmuslim .anim-2 {\n    opacity: 0;\n  }\n  .video-background video {\n    width: 100vw;\n  }\n  .video-background {\n    position: fixed;\n    top: 0;\n    left: 0;\n  }\n  #whatislamichistoryprefers .display-4 a,\n  .islamic-inventions {\n    color: rgba(255,255,255,1);\n  }\n\n  .islamic-inventions {\n    opacity: 0;\n  }\n\n</style>\n<div class=\"video-background\">\n  <video loop max-volume=\"1\">\n    <source src=\"img/tyson.mp4\" type=\"video/mp4\">\n  </video>\n</div>\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\"><a href=\"https://www.youtube.com/watch?v=WZCuF733p88\" target=\"_blank\">Has ISIS forgotten the best of what Muslims have done??</a></div>\n    <div class=\"display-3 islamic-inventions\">\n      <div>Algebra</div>\n      <div>Surgical Innovations</div>\n      <div>Modern Hospitals</div>\n      <div>Accredited Universities</div>\n      <div>The Guitar</div>\n    </div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 41 */
+/***/ function(module, exports) {
+
+	module.exports = "\n              <!-- the Qur’an prefers learning (‘ilm) over murder.\n              Last time we checked, the Qur’an values scientific observation, experimental knowledge and rationality, over blind leadership following, as seen in 750 VERSES (10%) of the Qur’an. -->\n\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 anim-1\">Last time we checked,</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers forgiveness over punishment.</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers peace over over war.</div><br /><br />\n    <div class=\"display-1 anim-1\">The Qur’an prefers knowledge over blindness.</div><br /><br />\n  </div>\n</div>\n";
+
+/***/ },
+/* 42 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">Who are they to declare who is Muslim and who is not? What is Islam and what is not?</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 43 */
+/***/ function(module, exports) {
+
+	module.exports = "\n<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4\">With all the hatred on the news.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 44 */
+/***/ function(module, exports) {
+
+	module.exports = "<div class=\"table\">\n  <div class=\"table-center\">\n    <div class=\"display-4 text-centered\">But that's okay.</div>\n  </div>\n</div>\n";
+
+/***/ },
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var map = {
+		"./aboutyourself/scene.json": 46,
+		"./battleofageneration/scene.json": 47,
+		"./complicatedsituation/scene.json": 48,
+		"./differentpractices/scene.json": 49,
+		"./doyoufeelmuslim/scene.json": 50,
+		"./explosion/scene.json": 51,
+		"./feelingconfused/scene.json": 52,
+		"./intro/scene.json": 53,
+		"./isisafterlifefallacy/scene.json": 54,
+		"./isisapocalypsemisquote/scene.json": 55,
+		"./isisbankrupt/scene.json": 56,
+		"./isisfightmisquote/scene.json": 57,
+		"./isisobjective/scene.json": 58,
+		"./isiswantstodivide/scene.json": 59,
+		"./itisnteasy/scene.json": 60,
+		"./itsgottoend/scene.json": 61,
+		"./iwantmyislamback1/scene.json": 62,
+		"./likepeace/scene.json": 63,
+		"./mixedfeelings/scene.json": 64,
+		"./muslimsbelieveindividuallife/scene.json": 65,
+		"./outtogetyou/scene.json": 66,
+		"./reactionstoterror/scene.json": 67,
+		"./somethingtoprove/scene.json": 68,
+		"./wearecoming/scene.json": 69,
+		"./wearenotafraid/scene.json": 70,
+		"./wewillprotecteachother/scene.json": 71,
+		"./whatislamichistoryprefers/scene.json": 72,
+		"./whatthequranprefers/scene.json": 73,
+		"./whoarethey/scene.json": 74,
+		"./withallthehatred/scene.json": 75,
+		"./yetthatsokay/scene.json": 76
+	};
+	function webpackContext(req) {
+		return __webpack_require__(webpackContextResolve(req));
+	};
+	function webpackContextResolve(req) {
+		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
+	};
+	webpackContext.keys = function webpackContextKeys() {
+		return Object.keys(map);
+	};
+	webpackContext.resolve = webpackContextResolve;
+	module.exports = webpackContext;
+	webpackContext.id = 45;
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#aboutyourself",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".about-yourself",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#aboutyourself",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#aboutyourself",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".about-yourself",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 47 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#battleofageneration",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#battleofageneration",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#battleofageneration",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 48 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#complicatedsituation",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#complicatedsituation",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#complicatedsituation",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".too-long-quote",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 49 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#differentpractices",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1.25
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#differentpractices",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#differentpractices",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 50 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#doyoufeelmuslim",
+			"duration": "50%",
+			"animations": [
+				{
+					"selector": ".anim-1",
+					"opacity": 1
+				}
+			]
+		},
+		{
+			"wrapper": "#doyoufeelmuslim",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#doyoufeelmuslim",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".anim-1",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-5%"
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 51 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#explosion",
+			"duration": "150%",
+			"animations": [
+				{
+					"selector": ".explosion-byline",
+					"translateY": "-25%",
+					"opacity": [
+						0,
+						1.75
+					]
+				},
+				{
+					"selector": "#domExplosionList",
+					"translateY": "-70%",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#explosion",
+			"duration": "150%",
+			"animations": [
+				{
+					"selector": ".dei-1",
+					"translateY": "-15%",
+					"translateX": "-10%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 2
+				},
+				{
+					"selector": ".dei-2",
+					"translateY": "-5%",
+					"translateX": "-4%",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".dei-3",
+					"translateY": "-9%",
+					"translateX": "2%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.2
+				},
+				{
+					"selector": ".dei-4",
+					"translateY": "-17%",
+					"translateX": "8%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.5
+				},
+				{
+					"selector": ".dei-5",
+					"translateY": "-2%",
+					"translateX": "-15%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 2
+				},
+				{
+					"selector": ".dei-6",
+					"translateY": "-1%",
+					"translateX": "-7%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.2
+				},
+				{
+					"selector": ".dei-7",
+					"translateY": "-4%",
+					"translateX": "2%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.1
+				},
+				{
+					"selector": ".dei-8",
+					"translateY": "-3%",
+					"translateX": "12%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.8
+				},
+				{
+					"selector": ".dei-9",
+					"translateY": "3%",
+					"translateX": "-12%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.5
+				},
+				{
+					"selector": ".dei-10",
+					"translateY": "5%",
+					"translateX": "-4%",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".dei-11",
+					"translateY": "8%",
+					"translateX": "6%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.4
+				},
+				{
+					"selector": ".dei-12",
+					"translateY": "1%",
+					"translateX": "20%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.9
+				},
+				{
+					"selector": ".dei-13",
+					"translateY": "8%",
+					"translateX": "-12%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.8
+				},
+				{
+					"selector": ".dei-14",
+					"translateY": "4%",
+					"translateX": "-3%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.3
+				},
+				{
+					"selector": ".dei-15",
+					"translateY": "14%",
+					"translateX": "5%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 1.7
+				},
+				{
+					"selector": ".dei-16",
+					"translateY": "6%",
+					"translateX": "9%",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": 2
+				}
+			]
+		},
+		{
+			"wrapper": "#explosion",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".explosion-byline",
+					"translateY": [
+						"-25%",
+						"-40%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 52 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#feelingconfused",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".us-against-them",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#feelingconfused",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#feelingconfused",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".us-against-them",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 53 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#intro",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{
+					"selector": ".display-1",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 54 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": "0",
+					"opacity": [
+						0,
+						1.75
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateX": "-25%",
+					"opacity": [
+						0,
+						0
+					]
+				},
+				{
+					"selector": ".calculator",
+					"translateX": "65%",
+					"opacity": [
+						0,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": "0%",
+					"opacity": [
+						0,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "150%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateX": [
+						"-25%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": ".calculator",
+					"translateX": [
+						"65%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0",
+						"0"
+					],
+					"opacity": [
+						1
+					]
+				},
+				{
+					"selector": ".quran-hidden",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "150%",
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisafterlifefallacy",
+			"duration": "250%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".calculator",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0%",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".premise",
+					"translateY": [
+						"0%",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 55 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": "0",
+					"opacity": [
+						0,
+						1.75
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateY": "25%",
+					"opacity": [
+						0,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": "0%",
+					"opacity": [
+						0,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "150%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"25%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0",
+						"0"
+					],
+					"opacity": [
+						1
+					]
+				},
+				{
+					"selector": ".quran-hidden",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "150%",
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisapocalypsemisquote",
+			"duration": "250%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0%",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".premise",
+					"translateY": [
+						"0%",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 56 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning1",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning2",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning3",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning4",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning5",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"-3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"focus": true,
+			"animations": []
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning6",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".cunning6",
+					"translateY": [
+						"10%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					],
+					"scale": [
+						1,
+						1.5
+					]
+				},
+				{
+					"selector": ".cunning1",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".cunning2",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".cunning3",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".cunning4",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".cunning5",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".cunning6",
+					"opacity": [
+						1,
+						0
+					],
+					"scale": [
+						1.5
+					]
+				},
+				{
+					"selector": ".newssource-hor",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisbankrupt",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".black-zone",
+					"translateX": [
+						"0%",
+						"90%"
+					]
+				},
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 57 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": "0",
+					"opacity": [
+						0,
+						1.75
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateY": "25%",
+					"opacity": [
+						0,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": "0%",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "150%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"25%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0",
+						"0"
+					],
+					"opacity": [
+						1
+					]
+				},
+				{
+					"selector": ".quran-hidden",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "150%",
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isisfightmisquote",
+			"duration": "250%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".quran-read",
+					"translateY": [
+						"0%",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 58 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isisobjective",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 59 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#isiswantstodivide",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".violent-zones",
+					"scale": [
+						1,
+						5.55
+					]
+				},
+				{
+					"selector": ".anim-2",
+					"opacity": [
+						0,
+						1.55
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isiswantstodivide",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isiswantstodivide",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".violent-zones",
+					"scale": [
+						5.55,
+						0
+					]
+				},
+				{
+					"selector": ".anim-1",
+					"opacity": [
+						0,
+						1.55
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#isiswantstodivide",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#isiswantstodivide",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".anim-1",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-20%"
+					]
+				},
+				{
+					"selector": ".anim-2",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-20%"
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 60 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_1",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				},
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_2",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_3",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_4",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_5",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_6",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_7",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_8",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"4%",
+						"0%"
+					],
+					"translateX": [
+						"-3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_9",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"-3%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_10",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_11",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_12",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"-4%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"0"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"focus": true,
+			"animations": []
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".isnteasy_13",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"-80%",
+						"0"
+					]
+				},
+				{
+					"selector": ".isnteasy_1",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-40%"
+					],
+					"translateX": [
+						"0%",
+						"30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_2",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_3",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"0%"
+					],
+					"translateX": [
+						"0%",
+						"30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_4",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_5",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".isnteasy_6",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".isnteasy_7",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".isnteasy_8",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"40%"
+					],
+					"translateX": [
+						"0%",
+						"-30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_9",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-40%"
+					],
+					"translateX": [
+						"0%",
+						"-30%"
+					]
+				},
+				{
+					"selector": ".isnteasy_10",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".isnteasy_11",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				},
+				{
+					"selector": ".isnteasy_12",
+					"opacity": [
+						1,
+						0
+					],
+					"translateY": [
+						"0%",
+						"-40%"
+					],
+					"translateX": [
+						"0%",
+						"0%"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "80%",
+			"animations": [
+				{
+					"selector": ".hidesource",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".trump",
+					"translateX": [
+						0,
+						"-7%"
+					],
+					"scale": [
+						1,
+						2
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#itisnteasy",
+			"duration": "300%",
+			"animations": [
+				{
+					"selector": ".trump",
+					"translateX": [
+						"-20%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 61 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#itsgottoend",
+			"duration": "1%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#itsgottoend",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": "#murder",
+					"opacity": [
+						0,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itsgottoend",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": "#murder",
+					"opacity": [
+						0,
+						1
+					]
+				},
+				{
+					"selector": "#agree",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#itsgottoend",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						1
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 62 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#iwantmyislamback1",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						2
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#iwantmyislamback1",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#iwantmyislamback1",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 63 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"translateY": "30%"
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".first",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".second",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".third",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "50%",
+			"animations": []
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".first",
+					"opacity": 1
+				},
+				{
+					"selector": ".second",
+					"opacity": 1
+				},
+				{
+					"selector": ".third",
+					"opacity": 1
+				},
+				{
+					"selector": ".fourth",
+					"opacity": [
+						-4,
+						1
+					]
+				},
+				{
+					"selector": ".display-4",
+					"translateY": [
+						"30%",
+						"0%"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "200%",
+			"animations": [
+				{
+					"selector": ".first",
+					"opacity": 1
+				},
+				{
+					"selector": ".second",
+					"opacity": 1
+				},
+				{
+					"selector": ".third",
+					"opacity": 1
+				},
+				{
+					"selector": ".fourth",
+					"opacity": 1
+				},
+				{
+					"selector": ".display-4",
+					"translateY": "0%"
+				}
+			]
+		},
+		{
+			"wrapper": "#likepeace",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		}
+	];
+
+/***/ },
+/* 64 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#mixedfeelings",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1.25
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#mixedfeelings",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#mixedfeelings",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 65 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#muslimsbelieveindividuallife",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#muslimsbelieveindividuallife",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#muslimsbelieveindividuallife",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 66 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#outtogetyou",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".out-to-get-you",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#outtogetyou",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#outtogetyou",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".out-to-get-you",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 67 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#reactionstoterror",
+			"duration": "150%",
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#reactionstoterror",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".anim-1",
+					"opacity": [
+						0,
+						1
+					],
+					"translateY": [
+						"0%",
+						"-38%"
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#reactionstoterror",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#reactionstoterror",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".anim-1",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 68 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#somethingtoprove",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#somethingtoprove",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#somethingtoprove",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 69 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#wearecoming",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#wearecoming",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#wearecoming",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 70 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#wearenotafraid",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#wearenotafraid",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#wearenotafraid",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 71 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#wewillprotecteachother",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": [
+						"25%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1.75
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateY": "25%",
+					"opacity": [
+						0,
+						0
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#wewillprotecteachother",
+			"duration": "50%",
+			"animations": []
+		},
+		{
+			"wrapper": "#wewillprotecteachother",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"25%",
+						"0"
+					],
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#wewillprotecteachother",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#wewillprotecteachother",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".premise",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				},
+				{
+					"selector": ".conclusion",
+					"translateY": [
+						"0",
+						"-25%"
+					],
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 72 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#whatislamichistoryprefers",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#whatislamichistoryprefers",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						1
+					]
+				},
+				{
+					"selector": ".islamic-inventions",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#whatislamichistoryprefers",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#whatislamichistoryprefers",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0.5
+					]
+				},
+				{
+					"selector": ".islamic-inventions",
+					"opacity": [
+						1,
+						0.5
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#whatislamichistoryprefers",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0.5,
+						0
+					]
+				},
+				{
+					"selector": ".islamic-inventions",
+					"opacity": [
+						0.5,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 73 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#whatthequranprefers",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 74 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#whoarethey",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#whoarethey",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#whoarethey",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 75 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#withallthehatred",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						1,
+						0
+					]
+				}
+			]
+		}
+	];
+
+/***/ },
+/* 76 */
+/***/ function(module, exports) {
+
+	module.exports = [
+		{
+			"wrapper": "#yetthatsokay",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						0,
+						1.25
+					]
+				}
+			]
+		},
+		{
+			"wrapper": "#yetthatsokay",
+			"duration": "100%",
+			"focus": true,
+			"animations": [
+				{}
+			]
+		},
+		{
+			"wrapper": "#yetthatsokay",
+			"duration": "100%",
+			"animations": [
+				{
+					"selector": ".display-4",
+					"opacity": [
+						2,
+						0
+					]
+				}
+			]
+		}
+	];
 
 /***/ }
 /******/ ]);
