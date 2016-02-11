@@ -19,8 +19,10 @@ module.exports.stop = function() {
 function loop() {
   window.requestAnimationFrame(function() {
     var rate = ($el.currentTime / $el.duration);
-    var percent = rate * 100;
+    var percent = (rate * 100).toFixed(2);
     $videoIndicator.css({'width': percent + 'vw'});
-    if(videoPlaying) {loop()}
+    if(videoPlaying) {
+      setTimeout( () => {loop()} , 41 )
+    }
   })
 }

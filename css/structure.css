@@ -19,3 +19,10 @@
   vertical-align: middle;
   padding: 2vmin;
 }
+
+.wrapper {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+}

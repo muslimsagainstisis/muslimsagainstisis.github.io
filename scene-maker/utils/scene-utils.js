@@ -1,8 +1,10 @@
 // NOTE: This file relies heavily on webpack for requires of html and json config files.
+const Kefir = require('kefir');
 
 // Constants
-var SCENE_INDEX = require('json!../scenes/index.json');
-var SCENE_CONTAINER_CSS_CLASS = 'wrapper';
+const SCENES_DIRECTORY = '../../scenes/'; // TODO: SCENES_DIRECTORY doesn't seem to work with webpack's html & json loader.
+const SCENE_INDEX = require('json!../../scenes/index.json');
+const SCENE_CONTAINER_CSS_CLASS = 'wrapper';
 
 /*
  * Generates an HTML string from scene.html files the scenes folder.
@@ -14,7 +16,7 @@ module.exports.renderHTML = function() {
     .map(scene => scene.id)
     .map(function(sceneName) {
       return {
-              html: require("html?attrs=false!../scenes/" + sceneName + "/scene.html"),
+              html: require("html?attrs=false!../../scenes/" + sceneName + "/scene.html"),
               name: sceneName
             }
     })
@@ -31,17 +33,17 @@ module.exports.renderHTML = function() {
 
 }
 
-module.exports.getScenes = function() {
+module.exports.getScenes = createHTMLForScenes;
 
+function createHTMLForScenes() {
   return SCENE_INDEX
     .map(scene => scene.id)
     .map(function(sceneName) { // get the scenes(which are in arrays)
-      return require("json!../scenes/" + sceneName + "/scene.json")
+      return require("json!../../scenes/" + sceneName + "/scene.json")
     })
     .reduce(function(prev, current) { // flatten arrays by concating into a new array
       return prev.concat(current);
-    }, []);
-
+    }, [])
 }
 
 module.exports.getAudioConfig = function() {

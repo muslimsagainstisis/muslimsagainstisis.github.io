@@ -10,7 +10,7 @@
 {
   "wrapper": "#doyoufeelmuslim",
   "duration": "100%",
-  "focus": true,
+  "focus": 3,
   "animations": [{
   }]
 },

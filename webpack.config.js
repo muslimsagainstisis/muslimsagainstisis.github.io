@@ -6,12 +6,12 @@ module.exports = {
     path: path.join(__dirname),
     filename: 'build.js'
   },
-  // devtool: 'inline-source-map',
+  devtool: 'inline-source-map',
   module: {
     loaders: [
-      { test: path.join(__dirname, 'js'), loader: 'babel-loader' },
-      { test: path.join(__dirname, 'scenes' ,'\.html$'), loader: 'html-loader' },
-      { test: path.join(__dirname, 'scenes','\.json$'), loader: 'json-loader' }
+      { test: path.join(__dirname, 'scene-maker'), loader: 'babel-loader' },
+      { test: path.join(__dirname, 'scenes' ,'\.html$'), loader: 'html-loader' }
+      // { test: path.join(__dirname, 'scenes','\.json$'), loader: 'json-loader' }
     ]
   }
 };

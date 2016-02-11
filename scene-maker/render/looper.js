@@ -21,7 +21,9 @@ module.exports.config = (config) => {
 }
 
 module.exports.next = (id) => {
+  // console.log('next', id)
   loop = loops[id];
+  // console.log(loop);
 }
 
 module.exports.pause = (config) => {
@@ -39,6 +41,7 @@ module.exports.stop = (config) => {
 function looper() {
 
   'use strict';
+  // console.log('looper', loop.sound1)
   let fadePercent = (loop.sound1.duration() > 5)  ? 0.01 : 0.015; // 2% or 1% depending on if sound is over 5 seconds
   let faderate =  1 - fadePercent;
   let duration = loop.sound1.duration() * 1000 * (1 - fadePercent);

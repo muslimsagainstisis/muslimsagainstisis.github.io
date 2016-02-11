@@ -1,35 +1,8 @@
 [
 {
   "wrapper": "#itsgottoend",
-  "duration": "1%",
+  "duration": "100%",
   "focus": true,
   "animations": [{
-  }]
-}
-,
-{
-  "wrapper": "#itsgottoend",
-  "duration": "100%",
-  "animations": [{
-    "selector": ".display-4",
-    "opacity": [0,1]},
-  { "selector": "#murder",
-    "opacity": [0,0]}]
-  },
-{ "wrapper": "#itsgottoend",
-  "duration": "100%",
-  "animations": [{
-    "selector": "#murder",
-    "opacity": [0,1]},
-  {
-    "selector": "#agree",
-    "opacity": [1,0]
-}]
-},{
-  "wrapper": "#itsgottoend",
-  "duration": "100%",
-  "animations": [{
-    "selector": ".display-4",
-    "opacity": [1,1]
   }]
 }]

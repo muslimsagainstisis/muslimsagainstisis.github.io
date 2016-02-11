@@ -1,6 +1,6 @@
 <style>
   .table input {
-    font-size: 6.5vw;
+    font-size: 9.5vmin;
     width: 5vw;
     background: black;
     border: none;
@@ -12,7 +12,7 @@
   }
   .calculator {
     background: black;
-    width: 50vw;
+    width: 48vw;
     margin: 0 auto;
     padding: 2vw;
     opacity: 0;
@@ -20,10 +20,19 @@
   #isisafterlifefallacy .quote {
     font-style: italic;
   }
+  .equals-container {
+    width: 100%;
+    position: relative;
+    padding: 3vmin 0;
+  }
   .equals {
-    width: 95%;
-    float: right;
-    border: 0.2vw solid
+    width: 83vmin;
+    position: absolute;
+    border: 0.2vw solid;
+    right: 0;
+  }
+  .equals:after {
+    clear: both;
   }
   .text-right {
     text-align: right;
@@ -37,13 +46,19 @@
   <div class="table-center" style="width:50%">
     <div class="display-2 premise text-bold">ISIS may kill innocent people indiscriminately...</div><br><br>
     <div class="display-2 conclusion text-bold">Have they even imagined how haram (sinful) that is?</div>
-    <div class="display-1 emphasis conclusion"><a href="http://quran.com/5/32" target="_blank"><strong>...whoever kills a soul ... it is as if he had slain mankind entirely.</strong></div><span class="quote-source conclusion">Qur'an 5:32</span></a>
   </div>
   <div class="table-center" style="width:50">
     <div class="display-3 text-right calculator">
       If you've murdered <input type="number" id="murdernumber" value="1" min="1" size="2" /></strong>
-      <br > * <span>7 billion people</span><br >
-      <hr class="equals">
+      <div class="display-1 emphasis conclusion">
+          <a href="http://quran.com/5/32" target="_blank">
+            <strong>...whoever kills a soul ... it is as if he had slain mankind entirely.</strong>
+            <span class="quote-source conclusion">Qur'an 5:32</span>
+          </a>
+      </div>  <div>* 7 billion people</div><br >
+      <div class="equals-container">
+        <hr class="equals"><br >
+      </div>
       The weight of murdering <br> <strong><span id="murdertotal"></span> people.</strong></div>
   </div>
 </div>

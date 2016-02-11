@@ -30,18 +30,13 @@ body {
   text-transform: inherit;
 }
 .display-3 {
-  font-size: 56px;
-  font-size: 5.6rem;
-  line-height: 84px;
-  line-height: 8.4rem;
-  letter-spacing: -0.05px;
-  letter-spacing: -0.005rem;
+  font-size: 7vmin;
   font-weight: 300;
   text-transform: inherit;
 }
 .display-2 {
   font-size: 45px;
-  font-size: 4.5rem;
+  font-size: 7vmin;
   line-height: 48px;
   line-height: 4.8rem;
   letter-spacing: 0px;
@@ -50,12 +45,7 @@ body {
   text-transform: inherit;
 }
 .display-1 {
-  font-size: 34px;
-  font-size: 3.4rem;
-  line-height: 40px;
-  line-height: 4rem;
-  letter-spacing: 0px;
-  letter-spacing: 0rem;
+  font-size: 5vmin;
   font-weight: 300;
   text-transform: inherit;
 }
