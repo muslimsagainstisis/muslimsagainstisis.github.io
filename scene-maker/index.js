@@ -14,28 +14,38 @@ let sceneAudioConfig =  sceneUtils.getAudioConfig();
 audioplayer.config(sceneAudioConfig);
 
 $(function() {
-      var ua = navigator.userAgent;
-      // if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(ua))
-        //  $('#unsupported').show();
-      // else if (/Chrome/i.test(ua))
         init();
-      // else
-        //  $('#unsupported').show();
 });
 
 function init() {
 
   Pace.on('done', (e) => {
 
-    $('.container-inner').html(sceneHtmlString)
+    var ua = navigator.userAgent;
+    if (isTouchDevice()) {
+      $('#unsupported').show();
+      $(".container").hide();
+      $(".loading").hide();
 
-    obscene.init(sceneMotionMap)
-    controls.init()
+    } else {
 
-    $('.loading').delay(300).fadeOut()
-    audioplayer.next('intro');
-    audioplayer.play();
+      $('.container-inner').html(sceneHtmlString)
+
+      obscene.init(sceneMotionMap)
+      controls.init()
+
+      $('.loading').delay(300).fadeOut()
+      audioplayer.next('intro');
+      audioplayer.play();
+
+
+    }
 
   })
 
+}
+
+function isTouchDevice() {
+  return 'ontouchstart' in window // works on most browsers
+    || 'onmsgesturechange' in window // works on ie10
 }
